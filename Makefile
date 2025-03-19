@@ -101,7 +101,7 @@ PREFIX_spgen := tools/spgen/source/
 CORE_LIBS := unix str ocamlcommon \
 	$(STDCOMPATDIR)/stdcompat \
 	$(patsubst %,bytes,$(BYTESDIR)) \
-	$(patsubst %,pcre,$(filter %/pcre.cma,$(LNKLIBS)))
+	$(patsubst %,pcre2,$(filter %/pcre2.cma,$(LNKLIBS)))
 
 ifeq ($(OCAMLATLEAST50),no)
 CORE_LIBS += bigarray
@@ -214,7 +214,7 @@ MENHIR_LIB := \
 	$(addsuffix /menhirLib$(LIBSUFFIX),$(filter %/menhirLib,$(MAKELIBS)))
 PARMAP_LIB := $(addsuffix /parmap$(LIBSUFFIX),$(filter %/parmap,$(MAKELIBS)))
 PYML_LIB := $(addsuffix /pyml$(LIBSUFFIX),$(filter %/pyml,$(MAKELIBS)))
-PCRE_LIB := $(addsuffix /pcre$(LIBSUFFIX),$(filter %/pcre,$(MAKELIBS)))
+PCRE_LIB := $(addsuffix /pcre2$(LIBSUFFIX),$(filter %/pcre2,$(MAKELIBS)))
 STDCOMPAT_LIB := $(STDCOMPATDIR)/stdcompat$(LIBSUFFIX)
 
 STDCOMPAT_USERS := parsing_c/type_annoter_c cocci parsing_cocci/check_meta \

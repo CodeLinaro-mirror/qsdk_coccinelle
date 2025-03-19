@@ -144,7 +144,7 @@ dnl  add a line for each package that is
 dnl  configured via AC_CHECK_COCCI_EXTPKG
 dnl  or AC_REQ_COCCI_EXTPKG
 AC_COCCI_INIT_PKG_EMPTY([dynlink])
-AC_COCCI_INIT_PKG_EMPTY([pcre])
+AC_COCCI_INIT_PKG_EMPTY([pcre2])
 AC_COCCI_INIT_PKG_EMPTY([bytes]) dnl for recent versions of pcre on old OCaml
 AC_COCCI_INIT_PKG_EMPTY([pyml])
 AC_COCCI_INIT_PKG_EMPTY([stdcompat])
@@ -368,18 +368,18 @@ dnl    OCAML_PKG_pcre: if "local" use str package
 AC_ARG_ENABLE([pcre-syntax], AS_HELP_STRING([--enable-pcre-syntax], [enable pcre regular expression syntax (default: auto)]))
 AS_IF([test "x$enable_pcre_syntax" != "xno"],
 [dnl
-  PKG_CHECK_MODULES([PCRE], [libpcre],[AC_SUBST([HAVE_PCRE],[yes])],[AC_SUBST([HAVE_PCRE],[no])])
+  PKG_CHECK_MODULES([PCRE], [libpcre2-8],[AC_SUBST([HAVE_PCRE],[yes])],[AC_SUBST([HAVE_PCRE],[no])])
   AS_IF([test -z "$enable_pcre_syntax" -a "x$HAVE_PCRE" != xyes],
   [dnl
     AC_SUBST([enable_pcre_syntax], [no])
   ],
   [dnl
     AS_IF([test "x$enable_pcre" = "xno"], [AC_SUBST([enable_pcre], [local])])
-    AC_CHECK_COCCI_EXTPKG([pcre])  dnl  will set $enable_pcre to 'yes', 'no', or 'local'
+    AC_CHECK_COCCI_EXTPKG([pcre2])  dnl  will set $enable_pcre to 'yes', 'no', or 'local'
     AS_IF([test "x$enable_pcre" = "xyes"],
     [dnl
       AC_MSG_CHECKING([if pcre depends on bytes])
-      AS_IF([test "x`$OCAMLFIND query -r -format '%p' pcre 2>/dev/null | grep bytes`" = "xbytes"],
+      AS_IF([test "x`$OCAMLFIND query -r -format '%p' pcre2 2>/dev/null | grep bytes`" = "xbytes"],
       [dnl
         AC_MSG_RESULT([yes])
         AC_MSG_CHECKING([if bytes is an actual module])
@@ -406,14 +406,14 @@ AS_IF([test "x$enable_pcre_syntax" != xno],
     AC_MSG_NOTICE([support for pcre syntax is enabled])
   ],
   [dnl
-    AC_MSG_ERROR([the pcre feature is enabled but the pkg-config libpcre library is not found])
+    AC_MSG_ERROR([the pcre feature is enabled but the pkg-config libpcre2-8 library is not found])
   ])
 
   AC_SUBST([REGEXP_MODULE], [Regexp_pcre])
   AC_SUBST([REGEXP_FILE], [regexp_pcre.ml])
 ],
 [dnl
-  AC_COCCI_INIT_PKG_EMPTY([pcre])
+  AC_COCCI_INIT_PKG_EMPTY([pcre2])
   AC_SUBST([REGEXP_MODULE], [Regexp_str])
   AC_SUBST([REGEXP_FILE], [regexp_str.ml])
 ])
@@ -570,7 +570,7 @@ AS_IF([test "$MAKE_stdcompat"],
 AS_IF([test "$MAKE_parmap"],
   AC_CONFIG_SUBDIRS(bundles/parmap))
 
-AS_IF([test "$MAKE_pcre"],
+AS_IF([test "$MAKE_pcre2"],
   [AS_IF([test "x$OCAMLATLEAST4030" = xno  ],
     [AC_SUBST([CAMLnoreturn_start], [])
      AC_SUBST([CAMLnoreturn_end], [])],
@@ -632,7 +632,7 @@ python scripting: $enable_python	(overridable with --enable-python)
 
 pcre regexes:     $enable_pcre_syntax	(overridable with --enable-pcre-syntax)
 pcre module:      $enable_pcre	(for local package use --disable-pcre)
-pcre library:     $HAVE_PCRE	(requires the libpcre-ocaml-dev package)
+pcre library:     $HAVE_PCRE	(requires the libpcre2-ocaml-dev package)
 
 optimized spatch: $enable_opt	(overridable with --disable-opt)
 

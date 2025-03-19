@@ -5,7 +5,7 @@
  *)
 
 type regexp =
-    Pcre of int (* Pcre.regexp *)
+    Pcre of int (* Pcre2.regexp *)
   | Str of Str.regexp
 
 (* A table is used because PCRE regular expressions are not comparable.
@@ -26,7 +26,7 @@ let regexp string =
     begin
       let c = !pcre_ctr in
       pcre_ctr := !pcre_ctr + 1;
-      Hashtbl.add pcre_table c (Pcre.regexp string);
+      Hashtbl.add pcre_table c (Pcre2.regexp string);
       Pcre c
     end
   else Str (Str.regexp string)
@@ -35,7 +35,7 @@ let string_match regexp string =
   match regexp with
       Pcre regexp ->
 	let regexp = Hashtbl.find pcre_table regexp in
-	Pcre.pmatch ~rex:regexp string
+	Pcre2.pmatch ~rex:regexp string
     | Str regexp ->
       try
 	ignore(Str.search_forward regexp string 0);

@@ -5,18 +5,18 @@
 VERSION=@PACKAGE_VERSION@
 
 # * for each library $1, add another entry in the same manner
-MAKELIBS=@MAKE_dynlink@ @MAKE_menhirLib@ @MAKE_pyml@ @MAKE_pcre@ \
+MAKELIBS=@MAKE_dynlink@ @MAKE_menhirLib@ @MAKE_pyml@ @MAKE_pcre2@ \
   @MAKE_parmap@
-LNKLIBS=@MODULES_dynlink@ @MODULES_menhirLib@ @MODULES_pcre@ @MODULES_pyml@ \
+LNKLIBS=@MODULES_dynlink@ @MODULES_menhirLib@ @MODULES_pcre2@ @MODULES_pyml@ \
   @MODULES_parmap@
 OPTLNKLIBS=@MODULESOPT_dynlink@ @MODULESOPT_menhirLib@ @MODULESOPT_pyml@ \
-  @MODULESOPT_pcre@ @MODULESOPT_parmap@
-INCLIBS=@PATH_dynlink@ @PATH_menhirLib@ @PATH_pyml@ @PATH_pcre@ \
+  @MODULESOPT_pcre2@ @MODULESOPT_parmap@
+INCLIBS=@PATH_dynlink@ @PATH_menhirLib@ @PATH_pyml@ @PATH_pcre2@ \
   @PATH_parmap@
-FLAGSLIBS=@FLAGS_dynlink@ @FLAGS_menhirLib@ @FLAGS_pyml@ @FLAGS_pcre@ \
+FLAGSLIBS=@FLAGS_dynlink@ @FLAGS_menhirLib@ @FLAGS_pyml@ @FLAGS_pcre2@ \
   @FLAGS_parmap@
 OPTFLAGSLIBS=@OPTFLAGS_dynlink@ @OPTFLAGS_menhirLib@ @OPTFLAGS_pyml@ \
-  @OPTFLAGS_pcre@ @OPTFLAGS_parmap@
+  @OPTFLAGS_pcre2@ @OPTFLAGS_parmap@
 # * end of library variables
 
 # system packages inc libs
@@ -106,7 +106,7 @@ METAINFO_DIR=@METAINFO_DIR@
 
 # selected libraries
 FEATURE_menhirLib=@FEATURE_menhirLib@
-FEATURE_pcre=@FEATURE_pcre@
+FEATURE_pcre=@FEATURE_pcre2@
 
 # Features
 FEATURE_PYTHON=@FEATURE_PYTHON@
@@ -114,7 +114,7 @@ FEATURE_OCAML=@FEATURE_OCAML@
 NO_OCAMLFIND=@SUBSTITUTED_OCAMLFIND@
 
 # Include paths
-PCREDIR=@PATH_pcre@
+PCREDIR=@PATH_pcre2@
 PARMAPDIR=@PATH_parmap@
 PYMLDIR=@PATH_pyml@
 MENHIRDIR=@PATH_menhirLib@

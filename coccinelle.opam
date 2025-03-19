@@ -18,7 +18,7 @@ depends: [
   "ocaml"
   "menhir"
   "ocamlfind"
-  "pcre"
+  "pcre2"
   "stdcompat"
   "pyml" { >= "20171117" }
   "conf-pkg-config"

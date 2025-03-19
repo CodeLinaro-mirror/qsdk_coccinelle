@@ -36,15 +36,15 @@ OPTFLAGS_pyml  = $(CFLAGS_pyml:%=-ccopt %) -cclib -lpyml_stubs
 
 # pcre library
 # Note: see the comment of the pycaml library about the double appearance of the stubs library.
-LOCAL_pcre     = $(BYTESDIR:=/bytes.cma) $(PCREDIR)/pcre.cma
-LOCALOPT_pcre  = $(BYTESDIR:=/bytes.cmxa) $(PCREDIR)/pcre.cmxa
-GLOBAL_pcre    = $(BYTESDIR:=/bytes.cma) $(PCREDIR)/pcre.cma
-GLOBALOPT_pcre = $(BYTESDIR:=/bytes.cmxa) $(PCREDIR)/pcre.cmxa
-FLAGS_pcre     = \
-	$(PCRE_LIBS:%=-ccopt %) -cclib -L$(PCREDIR) -dllib -lpcre_stubs \
-	-cclib -lpcre_stubs
-OPTFLAGS_pcre  = \
-	$(PCRE_LIBS:%=-ccopt %) -cclib -L$(PCREDIR) -cclib -lpcre_stubs
+LOCAL_pcre2     = $(BYTESDIR:=/bytes.cma) $(PCREDIR)/pcre2.cma
+LOCALOPT_pcre2  = $(BYTESDIR:=/bytes.cmxa) $(PCREDIR)/pcre2.cmxa
+GLOBAL_pcre2    = $(BYTESDIR:=/bytes.cma) $(PCREDIR)/pcre2.cma
+GLOBALOPT_pcre2 = $(BYTESDIR:=/bytes.cmxa) $(PCREDIR)/pcre2.cmxa
+FLAGS_pcre2     = \
+	$(PCRE_LIBS:%=-ccopt %) -cclib -L$(PCREDIR) -dllib -lpcre2_stubs \
+	-cclib -lpcre2_stubs
+OPTFLAGS_pcre2  = \
+	$(PCRE_LIBS:%=-ccopt %) -cclib -L$(PCREDIR) -cclib -lpcre2_stubs
 
 # dynlink library
 LOCAL_dynlink     =

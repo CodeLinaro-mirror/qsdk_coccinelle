@@ -19,7 +19,7 @@ set -e
 # the next lines in the file.
 
 # the replies file assumes that the
-# libpcre and python libraries are installed, and
+# libpcre2 and python libraries are installed, and
 # that none of the optional ocaml libraries are
 # installed.
 
@@ -102,9 +102,9 @@ pythonlibs() {
   echo "-L${prefix}/lib -lpython${version}"
 }
 
-# succeeds only if "/usr/include/pcre.h" exists
+# succeeds only if "/usr/include/pcre2.h" exists
 checkpcre() {
-  test -f /usr/include/pcre.h
+  test -f /usr/include/pcre2.h
 }
 
 # iterate through pattern-response pairs
