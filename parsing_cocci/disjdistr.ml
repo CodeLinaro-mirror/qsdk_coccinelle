@@ -6,46 +6,73 @@
 
 module Ast = Ast_cocci
 module V = Visitor_ast
+module S = Strip_ast
 
-let disjmult2 e1 e2 k =
-  List.concat
-    (List.map (function e1 -> List.map (function e2 -> k e1 e2) e2) e1)
+let disjmult2 strip e1 e2 k =
+  List.rev
+    (fst
+       (List.fold_left
+	  (fun (prev,seen) e1 ->
+	    List.fold_left
+	      (fun (prev,seen) e2 ->
+		let cur = k e1 e2 in
+		let scur = strip cur in
+		if List.mem scur seen
+		then (prev,seen)
+		else (cur :: prev, scur::seen))
+	      (prev,seen) e2)
+	  ([],[]) e1))
 
-let disjmult3 e1 e2 e3 k =
-  List.concat
-    (List.map
-       (function e1 ->
-	 List.concat
-	   (List.map
-	      (function e2 -> List.map (function e3 -> k e1 e2 e3) e3)
-	      e2))
-       e1)
+let disjmult3 strip e1 e2 e3 k =
+  List.rev
+    (fst
+       (List.fold_left
+	  (fun (prev,seen) e1 ->
+	    List.fold_left
+	      (fun (prev,seen) e2 ->
+		List.fold_left
+		  (fun (prev,seen) e3 ->
+		    let cur = k e1 e2 e3 in
+		    let scur = strip cur in
+		    if List.mem scur seen
+		    then (prev,seen)
+		    else (cur :: prev, scur::seen))
+		  (prev,seen) e3)
+	      (prev,seen) e2)
+	  ([],[]) e1))
 
-let disjmult4 e1 e2 e3 e4 k =
-  List.concat
-    (List.map
-       (function e1 ->
-	 List.concat
-	   (List.map
-	      (function e2 ->
-		List.concat
-		  (List.map
-		     (function e3 -> List.map (function e4 -> k e1 e2 e3 e4) e4)
-		     e3))
-	      e2))
-       e1)
+let disjmult4 strip e1 e2 e3 e4 k =
+  List.rev
+    (fst
+       (List.fold_left
+	  (fun (prev,seen) e1 ->
+	    List.fold_left
+	      (fun (prev,seen) e2 ->
+		List.fold_left
+		  (fun (prev,seen) e3 ->
+		    List.fold_left
+		      (fun (prev,seen) e4 ->
+			let cur = k e1 e2 e3 e4 in
+			let scur = strip cur in
+			if List.mem scur seen
+			then (prev,seen)
+			else (cur :: prev, scur::seen))
+		      (prev,seen) e4)
+		  (prev,seen) e3)
+	      (prev,seen) e2)
+	  ([],[]) e1))
 
 let rec disjmult f = function
     [] -> [[]]
   | x::xs ->
       let cur = f x in
       let rest = disjmult f xs in
-      disjmult2 cur rest (function cur -> function rest -> cur :: rest)
+      disjmult2 (fun x -> x) cur rest (function cur -> function rest -> cur :: rest)
 
 let disjtwoelems fstart frest (start,rest) =
   let cur = fstart start in
   let rest = frest rest in
-  disjmult2 cur rest (function cur -> function rest -> (cur,rest))
+  disjmult2 (fun x -> x) cur rest (function cur -> function rest -> (cur,rest))
 
 let disjoption f = function
     None -> [None]
@@ -53,6 +80,20 @@ let disjoption f = function
 
 let disjdots f d =
   List.map (function l -> Ast.rewrap d l) (disjmult f (Ast.unwrap d))
+
+let flatconcat strip l =
+  List.rev
+    (fst
+       (List.fold_left
+	  (fun (prev,seen) curl ->
+	    List.fold_left
+	      (fun (prev,seen) cur ->
+		let scur = strip cur in
+		if List.mem scur seen
+		then (prev,seen)
+		else (cur::prev, scur::seen))
+	      (prev,seen) curl)
+	  ([],[]) l))
 
 let rec disjty ft =
   match Ast.unwrap ft with
@@ -64,9 +105,9 @@ let rec disjty ft =
   | Ast.AsType(ty,asty) -> (* as ty doesn't contain disj *)
       let ty = disjty ty in
       List.map (function ty -> Ast.rewrap ft (Ast.AsType(ty,asty))) ty
-  | Ast.DisjType(types) -> List.concat (List.map disjty types)
+  | Ast.DisjType(types) -> flatconcat S.strip_fullType (List.map disjty types)
   | Ast.ConjType(types) ->
-      let types = disjmult disjty types in
+      let types = disjmult  disjty types in
       List.map (function types -> Ast.rewrap ft (Ast.ConjType(types))) types
   | Ast.OptType(ty) ->
       let ty = disjty ty in
@@ -89,11 +130,11 @@ and disjtypeC bty =
         (function ty ->
           Ast.rewrap bty (Ast.FunctionType(ty,lp,params,rp))) ty
   | Ast.Array(ty,lb,size,rb) ->
-      disjmult2 (disjty ty) (disjoption disjexp size)
+      disjmult2 S.strip_typeC (disjty ty) (disjoption disjexp size)
 	(function ty -> function size ->
 	  Ast.rewrap bty (Ast.Array(ty,lb,size,rb)))
   | Ast.Decimal(dec,lp,length,comma,precision_opt,rp) ->
-      disjmult2 (disjexp length) (disjoption disjexp precision_opt)
+      disjmult2 S.strip_typeC (disjexp length) (disjoption disjexp precision_opt)
 	(function length -> function precision_opt ->
 	  Ast.rewrap bty (Ast.Decimal(dec,lp,length,comma,precision_opt,rp)))
   | Ast.EnumName(enum,key,name) ->
@@ -108,7 +149,7 @@ and disjtypeC bty =
       let name = disjident name in
       List.map (function name -> Ast.rewrap bty (Ast.TypeName(typename,name))) name
   | Ast.EnumDef(ty,base,lb,ids,rb) ->
-      disjmult3 (disjty ty)
+      disjmult3 S.strip_typeC (disjty ty)
 	(disjoption
 	   (function (td, ty1) ->
 	      let ty1 = disjty ty1 in
@@ -118,7 +159,7 @@ and disjtypeC bty =
 	(fun ty base ids ->
 	  Ast.rewrap bty (Ast.EnumDef(ty,base,lb,ids,rb)))
   | Ast.StructUnionDef(ty,lb,decls,rb) ->
-      disjmult2 (disjty ty) (disjdots anndisjfield decls)
+      disjmult2 S.strip_typeC (disjty ty) (disjdots anndisjfield decls)
 	(function ty -> function decls ->
 	  Ast.rewrap bty (Ast.StructUnionDef(ty,lb,decls,rb)))
   | Ast.TypeOfExpr(tf,lp,exp,rp) ->
@@ -130,11 +171,11 @@ and disjtypeC bty =
       List.map
 	(function ty -> Ast.rewrap bty (Ast.TypeOfType(tf,lp,ty,rp))) ty
   | Ast.TemplateType(tn,lp,args,rp) ->
-      disjmult2 (disjty tn) (disjdots disjexp args)
+      disjmult2 S.strip_typeC (disjty tn) (disjdots disjexp args)
 	(fun tn args ->
 	  Ast.rewrap bty (Ast.TemplateType(tn,lp,args,rp)))
   | Ast.QualifiedType(ty,coloncolon,name) ->
-      disjmult2 (disjoption disjty ty) (disjident name)
+      disjmult2 S.strip_typeC (disjoption disjty ty) (disjident name)
       (function ty -> function name -> Ast.rewrap bty (Ast.QualifiedType(ty,coloncolon,name)))
   | Ast.NamedType(_) | Ast.AutoType(_) | Ast.MetaType(_,_,_,_) -> [bty]
 
@@ -152,7 +193,7 @@ and anndisjfield d =
 	(function decl -> Ast.rewrap d (Ast.FElem(bef,allminus,decl)))
 	(disjfield decls)
   | Ast.Fdots(_,_) -> [d]
-  | Ast.DisjField(decls) -> List.concat (List.map anndisjfield decls)
+  | Ast.DisjField(decls) -> flatconcat S.strip_ann_field (List.map anndisjfield decls)
   | Ast.ConjField(decl_list) ->
       let decl_list = disjmult anndisjfield decl_list in
       List.map (function decl_list -> Ast.rewrap d (Ast.ConjField(decl_list)))
@@ -170,7 +211,7 @@ and disjenumdecl d =
           List.map (function name -> Ast.rewrap d (Ast.Enum(name,None)))
             name
       | Some (eq,eval) ->
-          disjmult2 name (disjexp eval)
+          disjmult2 S.strip_enumdecl name (disjexp eval)
           (function name -> function eval ->
 	    Ast.rewrap d (Ast.Enum(name,Some(eq,eval)))))
   | Ast.EnumComma(cm) -> [d]
@@ -178,7 +219,7 @@ and disjenumdecl d =
 
 and disjident e =
   match Ast.unwrap e with
-    Ast.DisjId(id_list) -> List.concat (List.map disjident id_list)
+    Ast.DisjId(id_list) -> flatconcat S.strip_ident (List.map disjident id_list)
   | Ast.ConjId(id_list) ->
       let id_list = disjmult disjident id_list in
       List.map (function id_list -> Ast.rewrap e (Ast.ConjId(id_list)))
@@ -193,15 +234,15 @@ and disjexp e =
     Ast.Ident(_) | Ast.Constant _ | Ast.StringConstant _ ->
       [e] (* even Ident can't contain disj, nor StringConstant *)
   | Ast.FunCall(fn,lp,args,rp) ->
-      disjmult2 (disjexp fn) (disjdots disjexp args)
+      disjmult2 S.strip_expression (disjexp fn) (disjdots disjexp args)
 	(function fn -> function args ->
 	  Ast.rewrap e (Ast.FunCall(fn,lp,args,rp)))
   | Ast.Assignment(left,op,right,simple) ->
-      disjmult2 (disjexp left) (disjexp right)
+      disjmult2 S.strip_expression (disjexp left) (disjexp right)
 	(function left -> function right ->
 	  Ast.rewrap e (Ast.Assignment(left,op,right,simple)))
   | Ast.Sequence(left,op,right) ->
-      disjmult2 (disjexp left) (disjexp right)
+      disjmult2 S.strip_expression (disjexp left) (disjexp right)
 	(function left -> function right ->
 	  Ast.rewrap e (Ast.Sequence(left,op,right)))
   | Ast.CondExpr(exp1,why,Some exp2,colon,exp3) ->
@@ -213,7 +254,7 @@ and disjexp e =
 	  | _ -> failwith "not possible")
 	res
   | Ast.CondExpr(exp1,why,None,colon,exp3) ->
-      disjmult2 (disjexp exp1) (disjexp exp3)
+      disjmult2 S.strip_expression (disjexp exp1) (disjexp exp3)
 	(function exp1 -> function exp3 ->
 	  Ast.rewrap e (Ast.CondExpr(exp1,why,None,colon,exp3)))
   | Ast.Postfix(exp,op) ->
@@ -226,7 +267,7 @@ and disjexp e =
       let exp = disjexp exp in
       List.map (function exp -> Ast.rewrap e (Ast.Unary(exp,op))) exp
   | Ast.Binary(left,op,right) ->
-      disjmult2 (disjexp left) (disjexp right)
+      disjmult2 S.strip_expression (disjexp left) (disjexp right)
 	(function left -> function right ->
 	  Ast.rewrap e (Ast.Binary(left,op,right)))
   | Ast.Nested(exp,op,right) ->
@@ -237,23 +278,23 @@ and disjexp e =
       let exp = disjexp exp in
       List.map (function exp -> Ast.rewrap e (Ast.Paren(lp,exp,rp))) exp
   | Ast.ArrayAccess(fn,lb,args,rb) ->
-      disjmult2 (disjexp fn) (disjdots disjexp args)
+      disjmult2 S.strip_expression (disjexp fn) (disjdots disjexp args)
 	(function fn -> function args ->
 	  Ast.rewrap e (Ast.ArrayAccess(fn,lb,args,rb)))
   | Ast.RecordAccess(exp,pt,field) ->
-      disjmult2 (disjexp exp) (disjident field)
+      disjmult2 S.strip_expression (disjexp exp) (disjident field)
 	(fun exp field -> Ast.rewrap e (Ast.RecordAccess(exp,pt,field)))
   | Ast.RecordPtAccess(exp,ar,field) ->
-      disjmult2 (disjexp exp) (disjident field)
+      disjmult2 S.strip_expression (disjexp exp) (disjident field)
 	(fun exp field -> Ast.rewrap e (Ast.RecordPtAccess(exp,ar,field)))
   | Ast.QualifiedAccess(Some ty,coloncolon,field) ->
-      disjmult2 (disjty ty) (disjident field)
+      disjmult2 S.strip_expression (disjty ty) (disjident field)
     (fun ty field -> Ast.rewrap e (Ast.QualifiedAccess(Some ty,coloncolon,field)))
   | Ast.QualifiedAccess(None,coloncolon,field) ->
       let field = disjident field in 
       List.map (function field -> Ast.rewrap e (Ast.QualifiedAccess(None,coloncolon,field))) field
   | Ast.Cast(lp,ty,rp,exp) ->
-      disjmult2 (disjty ty) (disjexp exp)
+      disjmult2 S.strip_expression (disjty ty) (disjexp exp)
 	(function ty -> function exp ->
           Ast.rewrap e (Ast.Cast(lp,ty,rp,exp)))
   | Ast.SizeOfExpr(szf,exp) ->
@@ -273,11 +314,11 @@ and disjexp e =
       let exp = disjexp exp in
       List.map (function exp -> Ast.rewrap e (Ast.DeleteArr(dlt,lb,rb,exp))) exp
   | Ast.New(nw,pp_opt,lp_opt,ty,rp_opt,args_opt) ->
-      disjmult3 (disjoption disjargs pp_opt) (disjty ty) (disjoption disjargs args_opt)
+      disjmult3 S.strip_expression (disjoption disjargs pp_opt) (disjty ty) (disjoption disjargs args_opt)
 	(fun pp_opt ty args_opt ->
 	  Ast.rewrap e (Ast.New(nw,pp_opt,lp_opt,ty,rp_opt,args_opt)))
   | Ast.TemplateInst(tn,lp,args,rp) ->
-      disjmult2 (disjexp tn) (disjdots disjexp args)
+      disjmult2 S.strip_expression (disjexp tn) (disjdots disjexp args)
 	(fun tn args ->
 	  Ast.rewrap e (Ast.TemplateInst(tn,lp,args,rp)))
   | Ast.TupleExpr(init) ->
@@ -288,7 +329,7 @@ and disjexp e =
       let ty = disjty ty in
       List.map (function ty -> Ast.rewrap e (Ast.TypeExp(ty))) ty
   | Ast.Constructor(lp,ty,rp,init) ->
-      disjmult2 (disjty ty) (disjini init)
+      disjmult2 S.strip_expression (disjty ty) (disjini init)
 	(function ty ->
 	  function exp -> Ast.rewrap e (Ast.Constructor(lp,ty,rp,init)))
   | Ast.MetaErr(_,_,_,_) | Ast.MetaExpr(_,_,_,_,_,_,_)
@@ -299,7 +340,9 @@ and disjexp e =
   | Ast.AsSExpr(exp,asstm) -> (* as exp doesn't contain disj *)
       let exp = disjexp exp in
       List.map (function exp -> Ast.rewrap e (Ast.AsSExpr(exp,asstm))) exp
-  | Ast.DisjExpr(exp_list) -> List.concat (List.map disjexp exp_list)
+  | Ast.DisjExpr(exp_list) ->
+      let el = List.map disjexp exp_list in
+      flatconcat S.strip_expression el
   | Ast.ConjExpr(exp_list) ->
       let exp_list = disjmult disjexp exp_list in
       List.map (function exp_list -> Ast.rewrap e (Ast.ConjExpr(exp_list)))
@@ -319,7 +362,7 @@ and disjargs (lp,args,rp) =
 and disjparam p =
   match Ast.unwrap p with
     Ast.Param(ty,id,attr) ->
-      disjmult2 (disjty ty) (disjoption disjident id)
+      disjmult2 S.strip_parameter (disjty ty) (disjoption disjident id)
 	(fun ty id -> Ast.rewrap p (Ast.Param(ty,id,attr)))
   | Ast.AsParam(pm,asexp) -> (* as exp doesn't contain disj *)
       let pm = disjparam pm in
@@ -333,7 +376,7 @@ and disjparam p =
 and disjtemplateparam p =
   match Ast.unwrap p with
     Ast.TypenameOrClassParam(tyorcl,id,Some(eq,ty)) ->
-      disjmult2 (disjident id) (disjty ty)
+      disjmult2 S.strip_template_parameter (disjident id) (disjty ty)
 	(fun id ty ->
 	  Ast.rewrap p (Ast.TypenameOrClassParam(tyorcl,id,Some(eq,ty))))
   | Ast.TypenameOrClassParam(tyorcl,id,None) ->
@@ -342,10 +385,10 @@ and disjtemplateparam p =
 	(fun id -> Ast.rewrap p (Ast.TypenameOrClassParam(tyorcl,id,None)))
 	id
   | Ast.VarNameParam(ty,id,Some (eq,ini)) ->
-      disjmult3 (disjty ty) (disjident id) (disjini ini)
+      disjmult3 S.strip_template_parameter (disjty ty) (disjident id) (disjini ini)
 	(fun ty id exp -> Ast.rewrap p (Ast.VarNameParam(ty,id,Some(eq,ini))))
   | Ast.VarNameParam(ty,id,None) ->
-      disjmult2 (disjty ty) (disjident id)
+      disjmult2 S.strip_template_parameter (disjty ty) (disjident id)
 	(fun ty id -> Ast.rewrap p (Ast.VarNameParam(ty,id,None)))
   | Ast.TPComma(comma) -> [p]
   | Ast.TPDots(dots) -> [p]
@@ -372,7 +415,7 @@ and disjini i =
   | Ast.InitGccExt(designators,eq,ini) ->
       let designators = disjmult designator designators in
       let ini = disjini ini in
-      disjmult2 designators ini
+      disjmult2 S.strip_initialiser designators ini
 	(function designators -> function ini ->
 	  Ast.rewrap i (Ast.InitGccExt(designators,eq,ini)))
   | Ast.InitGccName(name,eq,ini) ->
@@ -394,7 +437,7 @@ and designator = function
       let exp = disjexp exp in
       List.map (function exp -> Ast.DesignatorIndex(lb,exp,rb)) exp
   | Ast.DesignatorRange(lb,min,dots,max,rb) ->
-      disjmult2 (disjexp min) (disjexp max)
+      disjmult2 (fun x -> x) (disjexp min) (disjexp max)
 	(function min -> function max ->
 	  Ast.DesignatorRange(lb,min,dots,max,rb))
 
@@ -415,23 +458,23 @@ and disjdecl d =
       let decl = disjdecl decl in
       List.map (function decl -> Ast.rewrap d (Ast.AsDecl(decl,asdecl))) decl
   | Ast.Init(align,stg,ty,id,endattr,eq,ini,sem) ->
-      disjmult4 (disjalign align) (disjty ty) (disjident id) (disjini ini)
+      disjmult4 S.strip_declaration (disjalign align) (disjty ty) (disjident id) (disjini ini)
 	(fun al ty id ini ->
 	  Ast.rewrap d (Ast.Init(al,stg,ty,id,endattr,eq,ini,sem)))
   | Ast.UnInit(align,stg,ty,id,endattr,sem) ->
-      disjmult3 (disjalign align) (disjty ty) (disjident id)
+      disjmult3 S.strip_declaration (disjalign align) (disjty ty) (disjident id)
 	(fun al ty id ->
 	  Ast.rewrap d (Ast.UnInit(al,stg,ty,id,endattr,sem)))
   | Ast.FunProto(fninfo,name,lp1,params,va,rp1,sem) ->
-      disjmult2 (disjmult disjfninfo fninfo) (disjident name)
+      disjmult2 S.strip_declaration (disjmult disjfninfo fninfo) (disjident name)
 	(fun fninfo name ->
 	  Ast.rewrap d (Ast.FunProto(fninfo,name,lp1,params,va,rp1,sem)))
   | Ast.MacroDecl(stg,preattr,name,lp,args,rp,attr,sem) ->
-      disjmult2 (disjident name) (disjdots disjexp args)
+      disjmult2 S.strip_declaration (disjident name) (disjdots disjexp args)
 	(fun name args ->
 	  Ast.rewrap d (Ast.MacroDecl(stg,preattr,name,lp,args,rp,attr,sem)))
   | Ast.MacroDeclInit(stg,preattr,name,lp,args,rp,attr,eq,ini,sem) ->
-      disjmult3 (disjident name) (disjdots disjexp args) (disjini ini)
+      disjmult3 S.strip_declaration (disjident name) (disjdots disjexp args) (disjini ini)
 	(fun name args ini ->
 	  Ast.rewrap d
 	    (Ast.MacroDeclInit(stg,preattr,name,lp,args,rp,attr,eq,ini,sem)))
@@ -441,7 +484,7 @@ and disjdecl d =
   | Ast.Typedef(stg,ty,id,sem) ->
       let ty = disjty ty in (* disj not allowed in id *)
       List.map (function ty -> Ast.rewrap d (Ast.Typedef(stg,ty,id,sem))) ty
-  | Ast.DisjDecl(decls) -> List.concat (List.map disjdecl decls)
+  | Ast.DisjDecl(decls) -> flatconcat S.strip_declaration (List.map disjdecl decls)
   | Ast.ConjDecl(decl_list) ->
       let decl_list = disjmult disjdecl decl_list in
       List.map (function decl_list -> Ast.rewrap d (Ast.ConjDecl(decl_list)))
@@ -456,11 +499,11 @@ and disjfield d =
   | Ast.MetaFieldList(_,_,_,_,_) -> [d]
   | Ast.Field(ty,id,bf,endattr,sem) ->
       let disjbf (c, e) = List.map (fun e -> (c, e)) (disjexp e) in
-      disjmult3 (disjty ty) (disjoption disjident id) (disjoption disjbf bf)
+      disjmult3 S.strip_field (disjty ty) (disjoption disjident id) (disjoption disjbf bf)
 	(fun ty id bf ->
 	  Ast.rewrap d (Ast.Field(ty,id,bf,endattr,sem)))
   | Ast.MacroDeclField(name,lp,args,rp,attr,sem) ->
-      disjmult2 (disjident name) (disjdots disjexp args)
+      disjmult2 S.strip_field (disjident name) (disjdots disjexp args)
 	(fun name args ->
 	  Ast.rewrap d (Ast.MacroDeclField(name,lp,args,rp,attr,sem)))
   | Ast.CppField di ->
@@ -478,7 +521,7 @@ and disjdirective di =
 	  Ast.rewrap di (Ast.UsingNamespace(usng,nmspc,name,sem)))
 	name
   | Ast.UsingTypename(usng,name,eq,tn,ty,sem) ->
-      disjmult2 (disjident name) (disjty ty)
+      disjmult2 (fun x -> x) (disjident name) (disjty ty)
 	(fun name ty ->
 	  Ast.rewrap di (Ast.UsingTypename(usng,name,eq,tn,ty,sem)))
   | Ast.UsingMember(usng,name,sem) ->
