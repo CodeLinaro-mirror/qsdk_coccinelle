@@ -30,14 +30,14 @@ On Debian/Ubuntu, install the following packages:
     If you do not install libparmap-ocaml-dev, then you will automatically use
     the bundle instead. However, if you used opam to switch to a different
     version of OCaml, you must uninstall libparmap-ocaml-dev / libparmap-ocaml.
- - libpcre-ocaml-dev (optional, for PCRE support, bundled)
-    If you do not install libpcre-ocaml-dev, then you will automatically use
+ - libpcre2-ocaml-dev (optional, for PCRE support, bundled)
+    If you do not install libpcre2-ocaml-dev, then you will automatically use
     the bundle instead. However, in order for the bundle to work, you also
     need:
-  - libpcre3-dev (optional, not bundled)
+  - libpcre2-dev (optional, not bundled)
      Additionally, if you used opam to switch to a different version of OCaml
-     and want PCRE support, then make sure you have libpcre-ocaml-dev /
-     libpcre-ocaml uninstalled and libpcre3-dev installed, otherwise Coccinelle
+     and want PCRE support, then make sure you have libpcre2-ocaml-dev /
+     libpcre2-ocaml uninstalled and libpcre2-dev installed, otherwise Coccinelle
      will not compile.
 
 On Fedora, install the following packages:
@@ -49,16 +49,16 @@ On Fedora, install the following packages:
  - ocaml-findlib-devel
  - ocaml-ocamldoc
  - ocaml-menhir (optional, bundled)
- - ocaml-pcre-devel (optional, bundled)
+ - ocaml-pcre2-devel (optional, bundled)
     Note: if you used opam to switch to a different version of OCaml,
-    installing ocaml-pcre-devel will make compilation impossible. Additionally,
+    installing ocaml-pcre2-devel will make compilation impossible. Additionally,
     PCRE support and OCaml scripting will be impossible.
 If you want Python scripting: Coccinelle is not compatible with Python 3.13,
 which is the default on Fedora as of 2024-12-19. Consider switching to Python
 3.12, for example.
 
 On Arch Linux, install the following packages:
-$ pacman -Syu pkg-config ocaml ocaml-findlib autoconf automake pcre make
+$ pacman -Syu pkg-config ocaml ocaml-findlib autoconf automake pcre2 make
 as well as the C compiler of your choice.
 Note: if you used opam to switch to a different version of OCaml, OCaml
 scripting will be impossible.
@@ -70,12 +70,12 @@ bundles):
   dev-build/libtool
   dev-lang/ocaml
   dev-lang/python
-  dev-libs/libpcre
+  dev-libs/libpcre2
   dev-ml/camlp4
   dev-ml/findlib
   dev-ml/menhir
   dev-ml/parmap
-  dev-ml/pcre-ocaml
+  dev-ml/pcre2-ocaml
   dev-ml/stdcompat
 You may also need:
   dev-ml/sexplib
