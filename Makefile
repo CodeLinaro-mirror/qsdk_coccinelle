@@ -121,7 +121,7 @@ LIBRARIES_spatch := $(LIBRARIES)
 
 LIBRARIES_spgen := $(CORE_LIBRARIES)
 
-CORE_BUNDLES=stdcompat menhirLib pcre
+CORE_BUNDLES=stdcompat menhirLib pcre2
 
 ALL_BUNDLES=$(CORE_BUNDLES) parmap pyml
 
@@ -319,8 +319,8 @@ install-spatch : spatch$(TOOLS_SUFFIX)
 		$(INSTALL_PROGRAM) bundles/pyml/dllpyml_stubs.so \
 			$(DESTDIR)$(LIBDIR); \
 	fi
-	if test -f bundles/pcre/dllpcre_stubs.so; then \
-		$(INSTALL_PROGRAM) bundles/pcre/dllpcre_stubs.so \
+	if test -f bundles/pcre2/dllpcre2_stubs.so; then \
+		$(INSTALL_PROGRAM) bundles/pcre2/dllpcre2_stubs.so \
 			$(DESTDIR)$(LIBDIR); \
 	fi
 	$(INSTALL_PROGRAM) spatch$(TOOLS_SUFFIX) $(DESTDIR)$(BINDIR)/spatch
@@ -521,11 +521,11 @@ endif
 ifneq ($(PCRE_LIB),)
 ifeq ($(NATIVE),yes)
 $(PCRE_LIB): $(STDCOMPAT_LIB)
-	$(MAKE) -C bundles/pcre all
-	$(MAKE) -C bundles/pcre all.opt
+	$(MAKE) -C bundles/pcre2 all
+	$(MAKE) -C bundles/pcre2 all.opt
 else
 $(PCRE_LIB): $(STDCOMPAT_LIB)
-	$(MAKE) -C bundles/pcre all
+	$(MAKE) -C bundles/pcre2 all
 endif
 endif
 
