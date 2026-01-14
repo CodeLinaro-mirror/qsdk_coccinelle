@@ -1,14 +1,14 @@
 # This Makefile serves as a wrapper to bundle the
-# pcre module without modifications.
+# pcre2 module without modifications.
 
-MODULES=pcre
-OBJS=pcre
-INTERFACES=pcre
-C_OBJS=pcre
-ARCHIVE=pcre
-LIBRARY=pcre
-C_LIBS=pcre
-SRC_DIR=pcre-ocaml/src
+MODULES=pcre2
+OBJS=pcre2
+INTERFACES=pcre2
+C_OBJS=pcre2
+ARCHIVE=pcre2
+LIBRARY=pcre2
+C_LIBS=pcre2-8
+SRC_DIR=pcre2-ocaml/lib
 
 OCAMLFLAGS+=-I $(STDCOMPATDIR)
 
