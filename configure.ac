@@ -594,8 +594,8 @@ AS_IF([test "$MAKE_pcre2"],
      AC_SUBST([noalloc], [[[@@noalloc]]])
      AC_SUBST([untagged], [[[@untagged]]])])
   AC_CONFIG_FILES([
-    bundles/pcre/pcre-ocaml/src/pcre.ml
-    bundles/pcre/pcre-ocaml/src/pcre_stubs.c
+    bundles/pcre2/pcre2-ocaml/lib/pcre2.ml
+    bundles/pcre2/pcre2-ocaml/lib/pcre2_stubs.c
   ])])
 
 dnl
