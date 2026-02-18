@@ -2169,26 +2169,8 @@ and (ident: info_ident -> (A.ident, string * Ast_c.info) matcher) =
 and (arguments: sequence ->
   (A.expression list, Ast_c.argument Ast_c.wrap2 list) matcher) =
   fun seqstyle eas ebs ->
-    match seqstyle with
-    | Unordered -> failwith "not handling ooo"
-    | Ordered ->
-	arguments_bis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
-          return (eas, (Ast_c.unsplit_comma ebs_splitted)))
 
-(* because '...' can match nothing, need to take care when have
-   * ', ...'   or '...,'  as in  f(..., X, Y, ...). It must match
-   * f(1,2) for instance.
-   * So I have added special cases such as (if startxs = []) and code
-   * in the Ecomma matching rule.
-   *
-   * old: Must do some try, for instance when f(...,X,Y,...) have to
-   * test the transfo for all the combinations    and if multiple transfo
-   * possible ? pb ? => the type is to return a expression option ? use
-   * some combinators to help ?
-   * update: with the tag-SP approach, no more a problem.
-*)
-
-and arguments_bis = fun eas ebs ->
+  let arguments_bis = fun eas ebs ->
   let match_dots ea =
     match A.unwrap ea with
       A.Edots(mcode, optexpr) -> Some (mcode, optexpr)
@@ -2211,7 +2193,26 @@ and arguments_bis = fun eas ebs ->
   list_matcher match_dots build_dots match_comma build_comma
     match_metalist build_metalist mktermval
     special_cases argument X.distrf_args B.split_comma  B.unsplit_comma
-    Lib_parsing_c.ii_of_args (function x -> Some x) eas ebs
+    Lib_parsing_c.ii_of_args (function x -> Some x) eas ebs in 
+
+    match seqstyle with
+    | Unordered -> failwith "not handling ooo"
+    | Ordered ->
+	arguments_bis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
+          return (eas, (Ast_c.unsplit_comma ebs_splitted)))
+
+(* because '...' can match nothing, need to take care when have
+   * ', ...'   or '...,'  as in  f(..., X, Y, ...). It must match
+   * f(1,2) for instance.
+   * So I have added special cases such as (if startxs = []) and code
+   * in the Ecomma matching rule.
+   *
+   * old: Must do some try, for instance when f(...,X,Y,...) have to
+   * test the transfo for all the combinations    and if multiple transfo
+   * possible ? pb ? => the type is to return a expression option ? use
+   * some combinators to help ?
+   * update: with the tag-SP approach, no more a problem.
+*)
 
 and argument arga argb =
   X.all_bound (A.get_inherited arga) >&&>
@@ -2249,13 +2250,8 @@ and (parameters: sequence ->
   (A.parameterTypeDef list, Ast_c.parameterType Ast_c.wrap2 list)
     matcher) =
   fun seqstyle eas ebs ->
-    match seqstyle with
-    | Unordered -> failwith "not handling ooo"
-    | Ordered ->
-	parameters_bis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
-          return (eas, (Ast_c.unsplit_comma ebs_splitted)))
 
-and parameters_bis eas ebs =
+let parameters_bis eas ebs =
   let match_dots ea =
     match A.unwrap ea with
       A.Pdots(mcode) -> Some (mcode, None)
@@ -2321,7 +2317,13 @@ and parameters_bis eas ebs =
     match_metalist build_metalist mktermval
     special_cases parameter X.distrf_params
     B.split_comma B.unsplit_comma
-    Lib_parsing_c.ii_of_params (function x -> Some x) eas ebs
+    Lib_parsing_c.ii_of_params (function x -> Some x) eas ebs in
+
+    match seqstyle with
+    | Unordered -> failwith "not handling ooo"
+    | Ordered ->
+	parameters_bis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
+          return (eas, (Ast_c.unsplit_comma ebs_splitted)))
 
 (*
    let split_register_param = fun (hasreg, idb, ii_b_s) ->
@@ -2386,45 +2388,10 @@ and (template_parameters: sequence ->
   (A.templateParameterTypeDef list, Ast_c.templateParameterType Ast_c.wrap2 list)
     matcher) =
   fun seqstyle eas ebs ->
-    match seqstyle with
-    | Unordered -> failwith "not handling ooo"
-    | Ordered ->
-	template_parameters_bis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
-          return (eas, (Ast_c.unsplit_comma ebs_splitted)))
 
-and template_parameters_bis eas ebs =
-  let match_dots ea =
-    match A.unwrap ea with
-      A.TPDots(mcode) -> Some (mcode, None)
-    | _ -> None in
-  let build_dots (mcode, _optexpr) = A.TPDots(mcode) in
-  let match_comma ea =
-    match A.unwrap ea with
-      A.TPComma ia1 -> Some ia1
-    | _ -> None in
-  let build_comma ia1 = A.TPComma ia1 in
-  let match_metalist ea = None in
-  let rec build_metalist ea (ida,leninfo,constraints,keep,inherited) =
-    failwith "template parameters: build metalist: not possible" in
-  let mktermval v = Ast_c.MetaTemplateParamListVal(v,v) in
-  let special_cases ea eas ebs = None in
-  list_matcher match_dots build_dots match_comma build_comma
-    match_metalist build_metalist mktermval
-    special_cases template_parameter X.distrf_template_params
-    B.split_comma B.unsplit_comma
-    Lib_parsing_c.ii_of_template_params (function x -> Some x) eas ebs
+  let template_parameters_bis eas ebs =
 
-(*
-   let split_register_param = fun (hasreg, idb, ii_b_s) ->
-   match hasreg, idb,  ii_b_s with
-   | false, Some s, [i1] -> Left (s, [], i1)
-   | true, Some s, [i1;i2] -> Left (s, [i1], i2)
-   | _, None, ii -> Right ii
-   | _ -> raise Impossible
-*)
-
-
-and template_parameter = fun parama paramb ->
+  let template_parameter = fun parama paramb ->
   match A.unwrap parama, paramb with
     A.TypenameOrClassParam(tyorcla,ida,Some(eqa,typa)),
       B.TypenameOrClassParam((idb, Some typb),ii) ->
@@ -2468,7 +2435,43 @@ and template_parameter = fun parama paramb ->
 	  A.VarNameParam(typa,ida,None) +> A.rewrap parama,
 	  B.VarNameParam((typb,idb,None),[]))))
   | (_,B.TemplateParam _) -> fail (* not supported yet in SmPL *)
-  | _ -> fail
+  | _ -> fail in
+
+  let match_dots ea =
+    match A.unwrap ea with
+      A.TPDots(mcode) -> Some (mcode, None)
+    | _ -> None in
+  let build_dots (mcode, _optexpr) = A.TPDots(mcode) in
+  let match_comma ea =
+    match A.unwrap ea with
+      A.TPComma ia1 -> Some ia1
+    | _ -> None in
+  let build_comma ia1 = A.TPComma ia1 in
+  let match_metalist ea = None in
+  let rec build_metalist ea (ida,leninfo,constraints,keep,inherited) =
+    failwith "template parameters: build metalist: not possible" in
+  let mktermval v = Ast_c.MetaTemplateParamListVal(v,v) in
+  let special_cases ea eas ebs = None in
+  list_matcher match_dots build_dots match_comma build_comma
+    match_metalist build_metalist mktermval
+    special_cases template_parameter X.distrf_template_params
+    B.split_comma B.unsplit_comma
+    Lib_parsing_c.ii_of_template_params (function x -> Some x) eas ebs in
+
+    match seqstyle with
+    | Unordered -> failwith "not handling ooo"
+    | Ordered ->
+	template_parameters_bis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
+          return (eas, (Ast_c.unsplit_comma ebs_splitted)))
+
+(*
+   let split_register_param = fun (hasreg, idb, ii_b_s) ->
+   match hasreg, idb,  ii_b_s with
+   | false, Some s, [i1] -> Left (s, [], i1)
+   | true, Some s, [i1;i2] -> Left (s, [i1], i2)
+   | _, None, ii -> Right ii
+   | _ -> raise Impossible
+*)
 
 (* ------------------------------------------------------------------------- *)
 and (declaration: (A.mcodekind * bool * A.declaration,B.declaration) matcher) =
@@ -4059,7 +4062,10 @@ and simulate_signed ta basea stringsa signaopt tb baseb ii rebuilda =
       | _, (B.Void|B.FloatType _|B.IntType _
 	    |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail
 
-and simulate_signed_meta ta basea signaopt tb baseb ii rebuilda =
+and (typeC: (A.typeC, Ast_c.typeC) matcher) =
+  fun ta tb ->
+
+  let simulate_signed_meta ta basea signaopt tb baseb ii rebuilda =
       (* In ii there is a list, sometimes of length 1 or 2 or 3.
        * And even if in baseb we have a Signed Int, that does not mean
        * that ii is of length 2, cos Signed is the default, so if in signa
@@ -4097,10 +4103,8 @@ and simulate_signed_meta ta basea signaopt tb baseb ii rebuilda =
           )
 
       | (B.Void|B.FloatType _|B.IntType _
-         |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail
+         |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail in 
 
-and (typeC: (A.typeC, Ast_c.typeC) matcher) =
-  fun ta tb ->
   match A.unwrap ta, tb with
     | A.BaseType (basea,stringsa), (B.BaseType baseb, ii) ->
 	simulate_signed ta basea stringsa None tb baseb ii
@@ -5122,14 +5126,9 @@ and inc_file (a, before_after) (b, h_rel_pos, o_rel_pos) =
 and (define_params: sequence ->
   (A.define_param list, (string B.wrap) B.wrap2 list) matcher) =
  fun seqstyle eas ebs ->
-  match seqstyle with
-  | Unordered -> failwith "not handling ooo"
-  | Ordered ->
-      define_paramsbis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
-        return (eas, (Ast_c.unsplit_comma ebs_splitted)))
 
-(* todo? facto code with argument and parameters ? *)
-and define_paramsbis = fun eas ebs ->
+  let define_paramsbis = fun eas ebs ->
+    (* todo? facto code with argument and parameters ? *)
   let match_dots ea =
     match A.unwrap ea with
       A.DPdots(mcode) -> Some (mcode, None)
@@ -5157,7 +5156,13 @@ and define_paramsbis = fun eas ebs ->
     match_metalist build_metalist mktermval
     special_cases define_parameter X.distrf_define_params
     B.split_comma B.unsplit_comma no_ii
-    (function x -> Some x) eas ebs
+    (function x -> Some x) eas ebs in
+
+  match seqstyle with
+  | Unordered -> failwith "not handling ooo"
+  | Ordered ->
+      define_paramsbis eas (Ast_c.split_comma ebs) >>= (fun eas ebs_splitted ->
+        return (eas, (Ast_c.unsplit_comma ebs_splitted)))
 
 and define_parameter = fun parama paramb ->
   match A.unwrap parama, paramb with
