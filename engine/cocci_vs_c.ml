@@ -1256,6 +1256,94 @@ let get_fninfo fninfoa =
     with [A.FInline(i)] -> Some i | _ -> None in
   (stoa,tya,inla)
 
+let compatible_size asz bsz =
+  match (asz,bsz) with
+    (A.IsChar,B.IsChar)
+  | (A.IsWchar,B.IsWchar)
+  | (A.IsUchar,B.IsUchar)
+  | (A.Isuchar,B.Isuchar)
+  | (A.Isu8char,B.Isu8char) -> return ((),())
+  | _ -> fail
+
+let inline_optional_allminus allminus inla (stob, iistob) =
+  (* "iso-by-absence" for storage, and return type. *)
+  X.optional_storage_flag (fun optional_storage ->
+  match inla, stob with
+  | None, (stobis, inline, align) ->
+      let do_minus () =
+        if allminus
+        then
+          minusize_list iistob >>= (fun () iistob ->
+            return (None, (stob, iistob))
+          )
+        else return (None, (stob, iistob))
+      in
+
+      if inline
+      then
+	if optional_storage
+	then
+	  begin
+	    if !FlagM.show_misc
+            then pr2_once "USING optional_storage builtin isomorphism";
+            do_minus()
+	  end
+	else fail (* inline not in SP and present in C code *)
+      else do_minus()
+
+  | Some x, ((stobis, inline, align)) ->
+      if inline
+      then
+	let rec loop acc = function
+	    [] -> fail
+	  | i1::iistob ->
+	      let str = B.str_of_info i1 in
+	      (match str with
+		"inline" ->
+		  (* not very elegant, but tokenf doesn't know what token to
+		     match with *)
+		  tokenf x i1 >>= (fun x i1 ->
+		    let rebuilt = (List.rev acc) @ i1 :: iistob in
+		    return (Some x,  ((stobis, inline, align), rebuilt)))
+	      |	_ -> loop (i1::acc) iistob) in
+	loop [] iistob
+      else fail (* SP has inline, but the C code does not *)
+  )
+
+let compatible_base_type a signa b =
+  let ok  = return ((),()) in
+
+  match a, b with
+    A.VoidType,    B.Void
+  | A.SizeType,    B.SizeType
+  | A.SSizeType,   B.SSizeType
+  | A.PtrDiffType, B.PtrDiffType ->
+      assert (signa = None);
+      ok
+  | A.CharType, B.IntType B.CChar when signa = None ->
+      ok
+  | A.CharType, B.IntType (B.Si (signb, B.CChar2)) ->
+      compatible_sign signa signb
+  | A.ShortType, B.IntType (B.Si (signb, B.CShort)) ->
+      compatible_sign signa signb
+  | A.IntType, B.IntType (B.Si (signb, B.CInt)) ->
+      compatible_sign signa signb
+  | A.LongType, B.IntType (B.Si (signb, B.CLong)) ->
+      compatible_sign signa signb
+  | A.LongLongType, B.IntType (B.Si (signb, B.CLongLong)) ->
+      compatible_sign signa signb
+  | A.FloatType, B.FloatType B.CFloat
+  | A.DoubleType, B.FloatType B.CDouble
+  | A.FloatComplexType, B.FloatType B.CFloatComplex
+  | A.DoubleComplexType, B.FloatType B.CDoubleComplex
+  | A.LongDoubleType, B.FloatType B.CLongDouble ->
+      assert (signa = None);
+      ok
+  | A.BoolType, _ -> failwith "no booltype in C"
+
+  | _, (B.Void|B.FloatType _|B.IntType _
+        |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail
+
 (*---------------------------------------------------------------------------*)
 let rec (rule_elem_node: (A.rule_elem, F.node) matcher) =
  fun re node ->
@@ -2003,15 +2091,6 @@ let rec (expression: (A.expression, Ast_c.expression) matcher) =
      B.Ident _),
      _),_)
        -> fail
-
-and compatible_size asz bsz =
-  match (asz,bsz) with
-    (A.IsChar,B.IsChar)
-  | (A.IsWchar,B.IsWchar)
-  | (A.IsUchar,B.IsUchar)
-  | (A.Isuchar,B.Isuchar)
-  | (A.Isu8char,B.Isu8char) -> return ((),())
-  | _ -> fail
 
 (* Allow ... to match nothing.  Useful in for loop headers and in array
 declarations.  Put a metavariable to require it to match something. *)
@@ -4655,51 +4734,6 @@ and storage_optional_allminus allminus aligna stoa (stob, iistob) =
 	loop [] iistob)
   | _ -> fail) (* not supporting the case with both alignas and storage in the semantic patch *)
 
-and inline_optional_allminus allminus inla (stob, iistob) =
-  (* "iso-by-absence" for storage, and return type. *)
-  X.optional_storage_flag (fun optional_storage ->
-  match inla, stob with
-  | None, (stobis, inline, align) ->
-      let do_minus () =
-        if allminus
-        then
-          minusize_list iistob >>= (fun () iistob ->
-            return (None, (stob, iistob))
-          )
-        else return (None, (stob, iistob))
-      in
-
-      if inline
-      then
-	if optional_storage
-	then
-	  begin
-	    if !FlagM.show_misc
-            then pr2_once "USING optional_storage builtin isomorphism";
-            do_minus()
-	  end
-	else fail (* inline not in SP and present in C code *)
-      else do_minus()
-
-  | Some x, ((stobis, inline, align)) ->
-      if inline
-      then
-	let rec loop acc = function
-	    [] -> fail
-	  | i1::iistob ->
-	      let str = B.str_of_info i1 in
-	      (match str with
-		"inline" ->
-		  (* not very elegant, but tokenf doesn't know what token to
-		     match with *)
-		  tokenf x i1 >>= (fun x i1 ->
-		    let rebuilt = (List.rev acc) @ i1 :: iistob in
-		    return (Some x,  ((stobis, inline, align), rebuilt)))
-	      |	_ -> loop (i1::acc) iistob) in
-	loop [] iistob
-      else fail (* SP has inline, but the C code does not *)
-  )
-
 and fullType_optional_allminus allminus tya retb =
   match tya with
   | None ->
@@ -4871,40 +4905,6 @@ and attr_arg = fun allminus ea eb ->
   | _ -> fail
 
 (*---------------------------------------------------------------------------*)
-
-and compatible_base_type a signa b =
-  let ok  = return ((),()) in
-
-  match a, b with
-    A.VoidType,    B.Void
-  | A.SizeType,    B.SizeType
-  | A.SSizeType,   B.SSizeType
-  | A.PtrDiffType, B.PtrDiffType ->
-      assert (signa = None);
-      ok
-  | A.CharType, B.IntType B.CChar when signa = None ->
-      ok
-  | A.CharType, B.IntType (B.Si (signb, B.CChar2)) ->
-      compatible_sign signa signb
-  | A.ShortType, B.IntType (B.Si (signb, B.CShort)) ->
-      compatible_sign signa signb
-  | A.IntType, B.IntType (B.Si (signb, B.CInt)) ->
-      compatible_sign signa signb
-  | A.LongType, B.IntType (B.Si (signb, B.CLong)) ->
-      compatible_sign signa signb
-  | A.LongLongType, B.IntType (B.Si (signb, B.CLongLong)) ->
-      compatible_sign signa signb
-  | A.FloatType, B.FloatType B.CFloat
-  | A.DoubleType, B.FloatType B.CDouble
-  | A.FloatComplexType, B.FloatType B.CFloatComplex
-  | A.DoubleComplexType, B.FloatType B.CDoubleComplex
-  | A.LongDoubleType, B.FloatType B.CLongDouble ->
-      assert (signa = None);
-      ok
-  | A.BoolType, _ -> failwith "no booltype in C"
-
-  | _, (B.Void|B.FloatType _|B.IntType _
-        |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail
 
 and compatible_base_type_meta a signa qua attr b ii local =
   let fullType_of_baseType b = Ast_c.mk_ty (Ast_c.BaseType b) [] in
