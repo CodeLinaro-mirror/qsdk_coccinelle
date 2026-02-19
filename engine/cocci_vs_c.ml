@@ -1351,6 +1351,33 @@ let rec (rule_elem_node: (A.rule_elem, F.node) matcher) =
    let check_constraints cstr mida idb =
      X.check_constraints (A.unwrap_mcode mida) idb cstr in
 
+     let assignOp opa opb =
+  match (A.unwrap opa), opb with
+    A.SimpleAssign a, (B.SimpleAssign, opb') ->
+      let opbi = tuple_of_list1 opb' in
+      tokenf a opbi >>= (fun a opbi ->
+	return
+	  (A.rewrap opa (A.SimpleAssign a), (B.SimpleAssign, [opbi])))
+  | A.OpAssign oa, (B.OpAssign ob,opb') ->
+    if equal_arithOp oa ob opb'
+    then
+      let opbi = tuple_of_list1 opb' in
+      tokenf oa opbi >>= (fun oa opbi_ ->
+	return
+          (A.rewrap opa (A.OpAssign oa), (B.OpAssign ob,[opbi])))
+    else fail
+  | A.MetaAssign (mv, c, keep, inherited), _ ->
+      let mv' = B.MetaAssignOpVal opb in
+      check_constraints c mv mv'
+	(fun () ->
+	  let max_min _ = Lib_parsing_c.ii_of_assignOp opb in
+	  X.envf keep inherited (mv,mv',max_min)
+	    (fun () -> X.distrf_assignOp mv opb
+		>>=
+	      (fun mv opb ->
+		return (A.MetaAssign(mv,c,keep,inherited)+> A.rewrap opa,opb))))
+  | _ -> fail in
+
      let binaryOp opa opb =
   match (A.unwrap opa), opb with
     A.Arith oa, (B.Arith ob,opb') ->
@@ -2104,33 +2131,6 @@ and (eoption:
 	  return (t1,t2)
       | _ -> option f t1 t2)
   | _ -> option f t1 t2
-
-and assignOp opa opb =
-  match (A.unwrap opa), opb with
-    A.SimpleAssign a, (B.SimpleAssign, opb') ->
-      let opbi = tuple_of_list1 opb' in
-      tokenf a opbi >>= (fun a opbi ->
-	return
-	  (A.rewrap opa (A.SimpleAssign a), (B.SimpleAssign, [opbi])))
-  | A.OpAssign oa, (B.OpAssign ob,opb') ->
-    if equal_arithOp oa ob opb'
-    then
-      let opbi = tuple_of_list1 opb' in
-      tokenf oa opbi >>= (fun oa opbi_ ->
-	return
-          (A.rewrap opa (A.OpAssign oa), (B.OpAssign ob,[opbi])))
-    else fail
-  | A.MetaAssign (mv, c, keep, inherited), _ ->
-      let mv' = B.MetaAssignOpVal opb in
-      check_constraints c mv mv'
-	(fun () ->
-	  let max_min _ = Lib_parsing_c.ii_of_assignOp opb in
-	  X.envf keep inherited (mv,mv',max_min)
-	    (fun () -> X.distrf_assignOp mv opb
-		>>=
-	      (fun mv opb ->
-		return (A.MetaAssign(mv,c,keep,inherited)+> A.rewrap opa,opb))))
-  | _ -> fail
 
 and string_fragments eas ebs =
   let match_dots ea =
