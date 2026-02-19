@@ -1162,6 +1162,100 @@ let binaryOp_eq op1 op2 = match (op1, op2) with
   | A.Logical o1, A.Logical o2 -> (A.unwrap_mcode o1) = (A.unwrap_mcode o2)
   | _ -> false
 
+let inc_file (a, before_after) (b, h_rel_pos, o_rel_pos) =
+
+  let rec aux_inc rel_pos (ass, bss) passed =
+    match ass, bss with
+    | [], [] -> true
+    | [A.IncDots], _ ->
+        let passed = List.rev passed in
+
+        (match before_after, !rel_pos with
+        | IncludeNothing, _ -> true
+        | IncludeMcodeBefore, Some x ->
+	    List.mem passed (x.Ast_c.first_of)
+
+        | IncludeMcodeAfter, Some x ->
+            List.mem passed (x.Ast_c.last_of)
+
+        (* no info, maybe cos of a #include <xx.h> that was already in a .h *)
+        | _, None -> false
+        )
+
+    | (A.IncPath x)::xs, y::ys -> x = y && aux_inc rel_pos (xs, ys) (x::passed)
+    | _ -> failwith "IncDots not in last place or other pb"
+
+  in
+
+  match a, b with
+  | A.Local ass, B.Local bss ->
+      aux_inc h_rel_pos (ass, bss) []
+  | A.NonLocal ass, B.NonLocal bss ->
+      aux_inc h_rel_pos (ass, bss) []
+  | A.AnyInc, (B.Local bss | B.NonLocal bss) ->
+      aux_inc o_rel_pos ([A.IncDots], bss) []
+  | _ -> false
+
+let equal_structUnion_type_cocci a b =
+  match Ast_cocci.unwrap_mcode a, b with
+    A.Struct, B.Struct -> true
+  | A.Union,  B.Union -> true
+  | _, (B.Struct | B.Union | B.Class) -> false
+
+let compatible_sign signa signb =
+  let ok  = return ((),()) in
+  match Common.map_option A.unwrap_mcode signa, signb with
+  | None, B.Signed ->
+      X.optional_qualifier_flag (fun optional_qualifier ->
+	if optional_qualifier
+	then ok
+	else fail)
+  | Some A.Signed, B.Signed
+  | Some A.Unsigned, B.UnSigned
+      -> ok
+  | _ -> fail
+
+let allminus_attrs attrbs =
+  let rec loop = function
+      [] -> return ([],[])
+    | ib::ibs ->
+        X.distrf_attr minusizer ib >>= (fun _ ib ->
+        loop ibs >>= (fun l ibs ->
+	return([],ib::ibs))) in
+  loop attrbs
+
+let minusize_list iixs =
+  iixs +> List.fold_left (fun acc ii ->
+    acc >>= (fun xs ys ->
+    tokenf minusizer ii >>= (fun minus ii ->
+      return (minus::xs, ii::ys)
+    ))) (return ([],[]))
+   >>= (fun _xsminys ys ->
+     return ((), List.rev ys)
+   )
+
+let put_fninfo stoa tya inla =
+  (match stoa  with Some st -> [A.FStorage st] | None -> []) @
+    (match inla   with Some i -> [A.FInline i] | None -> []) @
+    (match tya    with Some t -> [A.FType t] | None -> [])
+
+let get_fninfo fninfoa =
+      (* fninfoa records the order in which the SP specified the various
+	 information, but this isn't taken into account in the matching.
+	 Could this be a problem for transformation? *)
+  let stoa =
+    match
+      List.filter (function A.FStorage(s) -> true | _ -> false) fninfoa
+    with [A.FStorage(s)] -> Some s | _ -> None in
+  let tya =
+    match List.filter (function A.FType(s) -> true | _ -> false) fninfoa
+    with [A.FType(t)] -> Some t | _ -> None in
+
+  let inla =
+    match List.filter (function A.FInline(i) -> true | _ -> false) fninfoa
+    with [A.FInline(i)] -> Some i | _ -> None in
+  (stoa,tya,inla)
+
 (*---------------------------------------------------------------------------*)
 let rec (rule_elem_node: (A.rule_elem, F.node) matcher) =
  fun re node ->
@@ -3184,28 +3278,6 @@ and onefield = fun allminus decla (declb, iiptvirgb) ->
    | _, _ ->
        fail
 
-and get_fninfo fninfoa =
-      (* fninfoa records the order in which the SP specified the various
-	 information, but this isn't taken into account in the matching.
-	 Could this be a problem for transformation? *)
-  let stoa =
-    match
-      List.filter (function A.FStorage(s) -> true | _ -> false) fninfoa
-    with [A.FStorage(s)] -> Some s | _ -> None in
-  let tya =
-    match List.filter (function A.FType(s) -> true | _ -> false) fninfoa
-    with [A.FType(t)] -> Some t | _ -> None in
-
-  let inla =
-    match List.filter (function A.FInline(i) -> true | _ -> false) fninfoa
-    with [A.FInline(i)] -> Some i | _ -> None in
-  (stoa,tya,inla)
-
-and put_fninfo stoa tya inla =
-  (match stoa  with Some st -> [A.FStorage st] | None -> []) @
-    (match inla   with Some i -> [A.FInline i] | None -> []) @
-    (match tya    with Some t -> [A.FType t] | None -> [])
-
 (* ------------------------------------------------------------------------- *)
 
 and (initialiser: (A.initialiser, Ast_c.initialiser) matcher) =  fun ia ib ->
@@ -4506,17 +4578,6 @@ and sign signa signb =
       else fail
   | _, _ -> fail
 
-
-and minusize_list iixs =
-  iixs +> List.fold_left (fun acc ii ->
-    acc >>= (fun xs ys ->
-    tokenf minusizer ii >>= (fun minus ii ->
-      return (minus::xs, ii::ys)
-    ))) (return ([],[]))
-   >>= (fun _xsminys ys ->
-     return ((), List.rev ys)
-   )
-
 and storage_optional_allminus allminus aligna stoa (stob, iistob) =
   (* "iso-by-absence" for storage, and return type. *)
   X.optional_storage_flag (fun optional_storage ->
@@ -4702,15 +4763,6 @@ and attribute_list allminus attras attrbs =
     )
   | [attra], attrb -> fail
   | _ -> failwith "only one attribute allowed in SmPL")
-
-and allminus_attrs attrbs =
-  let rec loop = function
-      [] -> return ([],[])
-    | ib::ibs ->
-        X.distrf_attr minusizer ib >>= (fun _ ib ->
-        loop ibs >>= (fun l ibs ->
-	return([],ib::ibs))) in
-  loop attrbs
 
 and attribute = fun allminus ea eb ->
     match A.unwrap ea, eb with
@@ -5062,64 +5114,6 @@ and structure_type_name nm sb ii =
         | _ -> failwith "Cocci_vs_c.structure_type_name: unimplemented"
   in
   loop a b
-
-and compatible_sign signa signb =
-  let ok  = return ((),()) in
-  match Common.map_option A.unwrap_mcode signa, signb with
-  | None, B.Signed ->
-      X.optional_qualifier_flag (fun optional_qualifier ->
-	if optional_qualifier
-	then ok
-	else fail)
-  | Some A.Signed, B.Signed
-  | Some A.Unsigned, B.UnSigned
-      -> ok
-  | _ -> fail
-
-and equal_structUnion_type_cocci a b =
-  match Ast_cocci.unwrap_mcode a, b with
-    A.Struct, B.Struct -> true
-  | A.Union,  B.Union -> true
-  | _, (B.Struct | B.Union | B.Class) -> false
-
-
-
-(*---------------------------------------------------------------------------*)
-and inc_file (a, before_after) (b, h_rel_pos, o_rel_pos) =
-
-  let rec aux_inc rel_pos (ass, bss) passed =
-    match ass, bss with
-    | [], [] -> true
-    | [A.IncDots], _ ->
-        let passed = List.rev passed in
-
-        (match before_after, !rel_pos with
-        | IncludeNothing, _ -> true
-        | IncludeMcodeBefore, Some x ->
-	    List.mem passed (x.Ast_c.first_of)
-
-        | IncludeMcodeAfter, Some x ->
-            List.mem passed (x.Ast_c.last_of)
-
-        (* no info, maybe cos of a #include <xx.h> that was already in a .h *)
-        | _, None -> false
-        )
-
-    | (A.IncPath x)::xs, y::ys -> x = y && aux_inc rel_pos (xs, ys) (x::passed)
-    | _ -> failwith "IncDots not in last place or other pb"
-
-  in
-
-  match a, b with
-  | A.Local ass, B.Local bss ->
-      aux_inc h_rel_pos (ass, bss) []
-  | A.NonLocal ass, B.NonLocal bss ->
-      aux_inc h_rel_pos (ass, bss) []
-  | A.AnyInc, (B.Local bss | B.NonLocal bss) ->
-      aux_inc o_rel_pos ([A.IncDots], bss) []
-  | _ -> false
-
-
 
 (*---------------------------------------------------------------------------*)
 
