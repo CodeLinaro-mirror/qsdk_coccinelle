@@ -1344,6 +1344,169 @@ let compatible_base_type a signa b =
   | _, (B.Void|B.FloatType _|B.IntType _
         |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail
 
+(* todo: iso on sign, if not mentioned then free.  tochange?
+ * but that require to know if signed int because explicit
+ * signed int,  or because implicit signed int.
+ *)
+
+let sign signa signb =
+  match signa, signb with
+  | None, None -> return (None, [])
+  | Some signa,  Some (signb, ib) ->
+      if equal_sign (term signa) signb
+      then tokenf signa ib >>= (fun signa ib ->
+        return (Some signa, [ib])
+      )
+      else fail
+  | _, _ -> fail
+
+let simulate_signed ta basea stringsa signaopt tb baseb ii rebuilda =
+      (* In ii there is a list, sometimes of length 1 or 2 or 3.
+       * And even if in baseb we have a Signed Int, that does not mean
+       * that ii is of length 2, cos Signed is the default, so if in signa
+       * we have Signed explicitly ? we cannot "accrocher" this mcode to
+       * something :( So for the moment when there is signed in cocci,
+       * we force that there is a signed in c too (done in pattern.ml).
+       *)
+      let signbopt, iibaseb = split_signb_baseb_ii (baseb, ii) in
+
+
+      (* handle some iso on type ? (cf complex C rule for possible implicit
+	 casting) *)
+      match basea, baseb with
+      | A.VoidType,   B.Void
+      | A.FloatType,  B.FloatType (B.CFloat)
+      | A.DoubleType, B.FloatType (B.CDouble)
+      | A.SizeType,   B.SizeType
+      | A.SSizeType,  B.SSizeType
+      | A.PtrDiffType,B.PtrDiffType ->
+	  assert (signaopt = None);
+	  let stringa = tuple_of_list1 stringsa in
+	  let (ibaseb) = tuple_of_list1 ii in
+	  tokenf stringa ibaseb >>= (fun stringa ibaseb ->
+	    return (
+	    (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
+	    (B.BaseType baseb, [ibaseb])
+          ))
+
+      | A.LongDoubleType, B.FloatType B.CLongDouble
+      | A.FloatComplexType,  B.FloatType (B.CFloatComplex)
+      | A.DoubleComplexType, B.FloatType (B.CDoubleComplex) ->
+           assert (signaopt = None);
+	   let (stringa1,stringa2) = tuple_of_list2 stringsa in
+           let (ibaseb1,ibaseb2) = tuple_of_list2 ii in
+           tokenf stringa1 ibaseb1 >>= (fun stringa1 ibaseb1 ->
+           tokenf stringa2 ibaseb2 >>= (fun stringa2 ibaseb2 ->
+             return (
+               (rebuilda ([stringa1;stringa2], signaopt)) +> A.rewrap ta,
+               (B.BaseType baseb, [ibaseb1;ibaseb2])
+             )))
+
+
+      | A.LongDoubleComplexType, B.FloatType (B.CLongDoubleComplex) ->
+           assert (signaopt = None);
+	   let (stringa1,stringa2,stringa3) = tuple_of_list3 stringsa in
+           let (ibaseb1,ibaseb2,ibaseb3) = tuple_of_list3 ii in
+           tokenf stringa1 ibaseb1 >>= (fun stringa1 ibaseb1 ->
+           tokenf stringa2 ibaseb2 >>= (fun stringa2 ibaseb2 ->
+           tokenf stringa3 ibaseb3 >>= (fun stringa3 ibaseb3 ->
+             return (
+               (rebuilda ([stringa1;stringa2;stringa3], signaopt)) +> A.rewrap ta,
+               (B.BaseType baseb, [ibaseb1;ibaseb2;ibaseb3])
+             ))))
+
+      | A.CharType,  B.IntType B.CChar when signaopt = None ->
+	  let stringa = tuple_of_list1 stringsa in
+          let ibaseb = tuple_of_list1 ii in
+           tokenf stringa ibaseb >>= (fun stringa ibaseb ->
+             return (
+               (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
+               (B.BaseType (B.IntType B.CChar), [ibaseb])
+             ))
+
+      | A.CharType,B.IntType (B.Si (_sign, B.CChar2)) when signaopt <> None ->
+	  let stringa = tuple_of_list1 stringsa in
+          let ibaseb = tuple_of_list1 iibaseb in
+          sign signaopt signbopt >>= (fun signaopt iisignbopt ->
+          tokenf stringa ibaseb >>= (fun stringa ibaseb ->
+            return (
+               (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
+               (B.BaseType (baseb), iisignbopt @ [ibaseb])
+               )))
+
+      | A.ShortType, B.IntType (B.Si (_, B.CShort))
+      | A.IntType,   B.IntType (B.Si (_, B.CInt))
+      | A.LongType,  B.IntType (B.Si (_, B.CLong)) ->
+	  let stringa = tuple_of_list1 stringsa in
+          (match iibaseb with
+          | [] ->
+              (* iso-by-presence ? *)
+              (* when unsigned int in SP,  allow have just unsigned in C ? *)
+              if mcode_contain_plus (mcodekind stringa)
+              then fail
+              else
+
+                sign signaopt signbopt >>= (fun signaopt iisignbopt ->
+                    return (
+                      (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
+                      (B.BaseType (baseb), iisignbopt)
+                    ))
+
+
+          | [x;y] ->
+              (*pr2_once
+                "warning: long int or short int not handled by ast_cocci";*)
+              fail
+
+          | [ibaseb] ->
+          sign signaopt signbopt >>= (fun signaopt iisignbopt ->
+          tokenf stringa ibaseb >>= (fun stringa ibaseb ->
+            return (
+               (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
+               (B.BaseType (baseb), iisignbopt @ [ibaseb])
+               )))
+          | _ -> raise (Impossible 41)
+
+          )
+
+      | A.LongLongIntType, B.IntType (B.Si (_, B.CLongLong)) ->
+	  let (string1a,string2a,string3a) = tuple_of_list3 stringsa in
+          (match iibaseb with
+            [ibase1b;ibase2b;ibase3b] ->
+              sign signaopt signbopt >>= (fun signaopt iisignbopt ->
+              tokenf string1a ibase1b >>= (fun base1a ibase1b ->
+              tokenf string2a ibase2b >>= (fun base2a ibase2b ->
+              tokenf string3a ibase3b >>= (fun base3a ibase3b ->
+              return (
+		(rebuilda ([base1a;base2a;base3a], signaopt)) +> A.rewrap ta,
+		(B.BaseType (baseb), iisignbopt @ [ibase1b;ibase2b;ibase3b])
+              )))))
+	  | [ibase1b;ibase2b] -> fail (* int omitted *)
+	  | [] -> fail (* should something be done in this case? *)
+	  | _ -> raise (Impossible 42))
+
+
+      | A.LongLongType, B.IntType (B.Si (_, B.CLongLong))
+      | A.LongIntType,  B.IntType (B.Si (_, B.CLong))
+      | A.ShortIntType, B.IntType (B.Si (_, B.CShort)) ->
+	  let (string1a,string2a) = tuple_of_list2 stringsa in
+          (match iibaseb with
+            [ibase1b;ibase2b] ->
+              sign signaopt signbopt >>= (fun signaopt iisignbopt ->
+              tokenf string1a ibase1b >>= (fun base1a ibase1b ->
+              tokenf string2a ibase2b >>= (fun base2a ibase2b ->
+              return (
+		(rebuilda ([base1a;base2a], signaopt)) +> A.rewrap ta,
+		(B.BaseType (baseb), iisignbopt @ [ibase1b;ibase2b])
+              ))))
+	  | [ibase1b] -> fail (* short or long *)
+	  | [ibase1b;ibase2b;ibase3b] -> fail (* long long case *)
+	  | [] -> fail (* should something be done in this case? *)
+	  | _ -> raise (Impossible 43))
+
+      | _, (B.Void|B.FloatType _|B.IntType _
+	    |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail
+
 (*---------------------------------------------------------------------------*)
 let rec (rule_elem_node: (A.rule_elem, F.node) matcher) =
  fun re node ->
@@ -4066,153 +4229,6 @@ and (fullTypebis: (A.typeC, Ast_c.fullType) matcher) =
         return (ta, (qub, attrb, typb))
       )
 
-and simulate_signed ta basea stringsa signaopt tb baseb ii rebuilda =
-      (* In ii there is a list, sometimes of length 1 or 2 or 3.
-       * And even if in baseb we have a Signed Int, that does not mean
-       * that ii is of length 2, cos Signed is the default, so if in signa
-       * we have Signed explicitly ? we cannot "accrocher" this mcode to
-       * something :( So for the moment when there is signed in cocci,
-       * we force that there is a signed in c too (done in pattern.ml).
-       *)
-      let signbopt, iibaseb = split_signb_baseb_ii (baseb, ii) in
-
-
-      (* handle some iso on type ? (cf complex C rule for possible implicit
-	 casting) *)
-      match basea, baseb with
-      | A.VoidType,   B.Void
-      | A.FloatType,  B.FloatType (B.CFloat)
-      | A.DoubleType, B.FloatType (B.CDouble)
-      | A.SizeType,   B.SizeType
-      | A.SSizeType,  B.SSizeType
-      | A.PtrDiffType,B.PtrDiffType ->
-	  assert (signaopt = None);
-	  let stringa = tuple_of_list1 stringsa in
-	  let (ibaseb) = tuple_of_list1 ii in
-	  tokenf stringa ibaseb >>= (fun stringa ibaseb ->
-	    return (
-	    (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
-	    (B.BaseType baseb, [ibaseb])
-          ))
-
-      | A.LongDoubleType, B.FloatType B.CLongDouble
-      | A.FloatComplexType,  B.FloatType (B.CFloatComplex)
-      | A.DoubleComplexType, B.FloatType (B.CDoubleComplex) ->
-           assert (signaopt = None);
-	   let (stringa1,stringa2) = tuple_of_list2 stringsa in
-           let (ibaseb1,ibaseb2) = tuple_of_list2 ii in
-           tokenf stringa1 ibaseb1 >>= (fun stringa1 ibaseb1 ->
-           tokenf stringa2 ibaseb2 >>= (fun stringa2 ibaseb2 ->
-             return (
-               (rebuilda ([stringa1;stringa2], signaopt)) +> A.rewrap ta,
-               (B.BaseType baseb, [ibaseb1;ibaseb2])
-             )))
-
-
-      | A.LongDoubleComplexType, B.FloatType (B.CLongDoubleComplex) ->
-           assert (signaopt = None);
-	   let (stringa1,stringa2,stringa3) = tuple_of_list3 stringsa in
-           let (ibaseb1,ibaseb2,ibaseb3) = tuple_of_list3 ii in
-           tokenf stringa1 ibaseb1 >>= (fun stringa1 ibaseb1 ->
-           tokenf stringa2 ibaseb2 >>= (fun stringa2 ibaseb2 ->
-           tokenf stringa3 ibaseb3 >>= (fun stringa3 ibaseb3 ->
-             return (
-               (rebuilda ([stringa1;stringa2;stringa3], signaopt)) +> A.rewrap ta,
-               (B.BaseType baseb, [ibaseb1;ibaseb2;ibaseb3])
-             ))))
-
-      | A.CharType,  B.IntType B.CChar when signaopt = None ->
-	  let stringa = tuple_of_list1 stringsa in
-          let ibaseb = tuple_of_list1 ii in
-           tokenf stringa ibaseb >>= (fun stringa ibaseb ->
-             return (
-               (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
-               (B.BaseType (B.IntType B.CChar), [ibaseb])
-             ))
-
-      | A.CharType,B.IntType (B.Si (_sign, B.CChar2)) when signaopt <> None ->
-	  let stringa = tuple_of_list1 stringsa in
-          let ibaseb = tuple_of_list1 iibaseb in
-          sign signaopt signbopt >>= (fun signaopt iisignbopt ->
-          tokenf stringa ibaseb >>= (fun stringa ibaseb ->
-            return (
-               (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
-               (B.BaseType (baseb), iisignbopt @ [ibaseb])
-               )))
-
-      | A.ShortType, B.IntType (B.Si (_, B.CShort))
-      | A.IntType,   B.IntType (B.Si (_, B.CInt))
-      | A.LongType,  B.IntType (B.Si (_, B.CLong)) ->
-	  let stringa = tuple_of_list1 stringsa in
-          (match iibaseb with
-          | [] ->
-              (* iso-by-presence ? *)
-              (* when unsigned int in SP,  allow have just unsigned in C ? *)
-              if mcode_contain_plus (mcodekind stringa)
-              then fail
-              else
-
-                sign signaopt signbopt >>= (fun signaopt iisignbopt ->
-                    return (
-                      (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
-                      (B.BaseType (baseb), iisignbopt)
-                    ))
-
-
-          | [x;y] ->
-              (*pr2_once
-                "warning: long int or short int not handled by ast_cocci";*)
-              fail
-
-          | [ibaseb] ->
-          sign signaopt signbopt >>= (fun signaopt iisignbopt ->
-          tokenf stringa ibaseb >>= (fun stringa ibaseb ->
-            return (
-               (rebuilda ([stringa], signaopt)) +> A.rewrap ta,
-               (B.BaseType (baseb), iisignbopt @ [ibaseb])
-               )))
-          | _ -> raise (Impossible 41)
-
-          )
-
-      | A.LongLongIntType, B.IntType (B.Si (_, B.CLongLong)) ->
-	  let (string1a,string2a,string3a) = tuple_of_list3 stringsa in
-          (match iibaseb with
-            [ibase1b;ibase2b;ibase3b] ->
-              sign signaopt signbopt >>= (fun signaopt iisignbopt ->
-              tokenf string1a ibase1b >>= (fun base1a ibase1b ->
-              tokenf string2a ibase2b >>= (fun base2a ibase2b ->
-              tokenf string3a ibase3b >>= (fun base3a ibase3b ->
-              return (
-		(rebuilda ([base1a;base2a;base3a], signaopt)) +> A.rewrap ta,
-		(B.BaseType (baseb), iisignbopt @ [ibase1b;ibase2b;ibase3b])
-              )))))
-	  | [ibase1b;ibase2b] -> fail (* int omitted *)
-	  | [] -> fail (* should something be done in this case? *)
-	  | _ -> raise (Impossible 42))
-
-
-      | A.LongLongType, B.IntType (B.Si (_, B.CLongLong))
-      | A.LongIntType,  B.IntType (B.Si (_, B.CLong))
-      | A.ShortIntType, B.IntType (B.Si (_, B.CShort)) ->
-	  let (string1a,string2a) = tuple_of_list2 stringsa in
-          (match iibaseb with
-            [ibase1b;ibase2b] ->
-              sign signaopt signbopt >>= (fun signaopt iisignbopt ->
-              tokenf string1a ibase1b >>= (fun base1a ibase1b ->
-              tokenf string2a ibase2b >>= (fun base2a ibase2b ->
-              return (
-		(rebuilda ([base1a;base2a], signaopt)) +> A.rewrap ta,
-		(B.BaseType (baseb), iisignbopt @ [ibase1b;ibase2b])
-              ))))
-	  | [ibase1b] -> fail (* short or long *)
-	  | [ibase1b;ibase2b;ibase3b] -> fail (* long long case *)
-	  | [] -> fail (* should something be done in this case? *)
-	  | _ -> raise (Impossible 43))
-
-      | _, (B.Void|B.FloatType _|B.IntType _
-	    |B.SizeType|B.SSizeType|B.PtrDiffType) -> fail
-
 and (typeC: (A.typeC, Ast_c.typeC) matcher) =
   fun ta tb ->
 
@@ -4639,23 +4655,6 @@ and (typeC: (A.typeC, Ast_c.typeC) matcher) =
       B.Pointer _ | B.BaseType _),
      _)
      -> fail
-
-
-(* todo: iso on sign, if not mentioned then free.  tochange?
- * but that require to know if signed int because explicit
- * signed int,  or because implicit signed int.
- *)
-
-and sign signa signb =
-  match signa, signb with
-  | None, None -> return (None, [])
-  | Some signa,  Some (signb, ib) ->
-      if equal_sign (term signa) signb
-      then tokenf signa ib >>= (fun signa ib ->
-        return (Some signa, [ib])
-      )
-      else fail
-  | _, _ -> fail
 
 and storage_optional_allminus allminus aligna stoa (stob, iistob) =
   (* "iso-by-absence" for storage, and return type. *)
