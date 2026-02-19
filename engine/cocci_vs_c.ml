@@ -1263,6 +1263,58 @@ let rec (rule_elem_node: (A.rule_elem, F.node) matcher) =
    let check_constraints cstr mida idb =
      X.check_constraints (A.unwrap_mcode mida) idb cstr in
 
+     let binaryOp opa opb =
+  match (A.unwrap opa), opb with
+    A.Arith oa, (B.Arith ob,opb') ->
+      if equal_arithOp oa ob opb'
+      then
+	let opbi = tuple_of_list1 opb' in
+	tokenf oa opbi >>= (fun oa opbi ->
+	  return
+            (A.rewrap opa (A.Arith oa), (B.Arith ob,[opbi])))
+      else fail
+  | A.Logical oa, (B.Logical ob,opb') ->
+      if equal_logicalOp oa ob opb'
+      then
+	let opbi = tuple_of_list1 opb' in
+	tokenf oa opbi >>= (fun oa opbi ->
+	  return
+            (A.rewrap opa (A.Logical oa), (B.Logical ob,[opbi])))
+      else fail
+  | A.MetaBinary (mv, c, keep, inherited), _ ->
+      let mv' = B.MetaBinaryOpVal opb in
+      check_constraints c mv mv'
+	(fun () ->
+	  let max_min _ = Lib_parsing_c.ii_of_binaryOp opb in
+	  X.envf keep inherited (mv,mv',max_min)
+            (fun () -> X.distrf_binaryOp mv opb
+		>>=
+	      (fun mv opb ->
+		return (A.MetaBinary(mv,c,keep,inherited)+> A.rewrap opa,opb))))
+  | _ -> fail in
+
+     let string_format ea eb =
+  X.all_bound (A.get_inherited ea) >&&>
+  let wa x = A.rewrap ea x in
+  match A.unwrap ea,eb with
+    A.ConstantFormat(str1), (B.ConstantFormat(str2),ii) ->
+      let ib1 = tuple_of_list1 ii in
+      if A.unwrap_mcode str1 = str2
+      then
+	tokenf str1 ib1 >>= (fun str1 ib1 ->
+	  return
+	    (A.ConstantFormat(str1) +> wa,
+	     (B.ConstantFormat(str2),[ib1])))
+      else fail
+  | A.MetaFormat(ida,constraints,keep,inherited),(B.ConstantFormat(str2),ii) ->
+      check_constraints constraints ida (B.MetaIdVal str2)
+      (fun () ->
+	let max_min _ = Lib_parsing_c.ii_of_format eb in
+	X.envf keep inherited (ida,Ast_c.MetaFmtVal eb,max_min) (fun () ->
+          X.distrf_format ida eb
+            ) >>= (fun ida eb ->
+              return (A.MetaFormat(ida,constraints,keep,inherited) +> wa,eb))) in
+
 let rec (expression: (A.expression, Ast_c.expression) matcher) =
  fun ea eb ->
    if A.get_test_exp ea && not (Ast_c.is_test eb) then
@@ -2001,36 +2053,6 @@ and assignOp opa opb =
 		return (A.MetaAssign(mv,c,keep,inherited)+> A.rewrap opa,opb))))
   | _ -> fail
 
-and binaryOp opa opb =
-  match (A.unwrap opa), opb with
-    A.Arith oa, (B.Arith ob,opb') ->
-      if equal_arithOp oa ob opb'
-      then
-	let opbi = tuple_of_list1 opb' in
-	tokenf oa opbi >>= (fun oa opbi ->
-	  return
-            (A.rewrap opa (A.Arith oa), (B.Arith ob,[opbi])))
-      else fail
-  | A.Logical oa, (B.Logical ob,opb') ->
-      if equal_logicalOp oa ob opb'
-      then
-	let opbi = tuple_of_list1 opb' in
-	tokenf oa opbi >>= (fun oa opbi ->
-	  return
-            (A.rewrap opa (A.Logical oa), (B.Logical ob,[opbi])))
-      else fail
-  | A.MetaBinary (mv, c, keep, inherited), _ ->
-      let mv' = B.MetaBinaryOpVal opb in
-      check_constraints c mv mv'
-	(fun () ->
-	  let max_min _ = Lib_parsing_c.ii_of_binaryOp opb in
-	  X.envf keep inherited (mv,mv',max_min)
-            (fun () -> X.distrf_binaryOp mv opb
-		>>=
-	      (fun mv opb ->
-		return (A.MetaBinary(mv,c,keep,inherited)+> A.rewrap opa,opb))))
-  | _ -> fail
-
 and string_fragments eas ebs =
   let match_dots ea =
     match A.unwrap ea with
@@ -2086,28 +2108,6 @@ and string_fragment ea (eb,ii) =
   | A.MetaFormatList(pct1,name1,lenname1,_,_,_), eb ->
       failwith "string_fragment: meta format list: not possible"
   | _,_ -> fail
-
-and string_format ea eb =
-  X.all_bound (A.get_inherited ea) >&&>
-  let wa x = A.rewrap ea x in
-  match A.unwrap ea,eb with
-    A.ConstantFormat(str1), (B.ConstantFormat(str2),ii) ->
-      let ib1 = tuple_of_list1 ii in
-      if A.unwrap_mcode str1 = str2
-      then
-	tokenf str1 ib1 >>= (fun str1 ib1 ->
-	  return
-	    (A.ConstantFormat(str1) +> wa,
-	     (B.ConstantFormat(str2),[ib1])))
-      else fail
-  | A.MetaFormat(ida,constraints,keep,inherited),(B.ConstantFormat(str2),ii) ->
-      check_constraints constraints ida (B.MetaIdVal str2)
-      (fun () ->
-	let max_min _ = Lib_parsing_c.ii_of_format eb in
-	X.envf keep inherited (ida,Ast_c.MetaFmtVal eb,max_min) (fun () ->
-          X.distrf_format ida eb
-            ) >>= (fun ida eb ->
-              return (A.MetaFormat(ida,constraints,keep,inherited) +> wa,eb)))
 
 (* ------------------------------------------------------------------------- *)
 
