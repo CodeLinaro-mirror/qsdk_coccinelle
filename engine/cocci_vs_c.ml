@@ -1593,6 +1593,62 @@ let rec (rule_elem_node: (A.rule_elem, F.node) matcher) =
             ) >>= (fun ida eb ->
               return (A.MetaFormat(ida,constraints,keep,inherited) +> wa,eb))) in
 
+     let string_fragment ea (eb,ii) =
+  X.all_bound (A.get_inherited ea) >&&>
+  let wa x = A.rewrap ea x in
+  match A.unwrap ea,eb with
+    A.ConstantFragment(str1), B.ConstantFragment(str2)
+      when A.unwrap_mcode str1 = str2 ->
+      let ib1 = tuple_of_list1 ii in
+      tokenf str1 ib1 >>= (fun str1 ib1 ->
+	return
+	  (A.ConstantFragment(str1) +> wa,
+	   (B.ConstantFragment(str2),[ib1])))
+  | A.FormatFragment(pct1,fmt1), B.FormatFragment(fmt2) ->
+      let ib1 = tuple_of_list1 ii in
+      tokenf pct1 ib1 >>= (fun pct1 ib1 ->
+      string_format fmt1 fmt2 >>= (fun fmt1 fmt2 ->
+	return
+	  (A.FormatFragment(pct1,fmt1) +> wa,
+	   (B.FormatFragment(fmt2), [ib1]))))
+  | A.Strdots dots, eb -> failwith "string_fragment: strdots: not possible"
+  | A.MetaFormatList(pct1,name1,lenname1,_,_,_), eb ->
+      failwith "string_fragment: meta format list: not possible"
+  | _,_ -> fail in
+
+     let string_fragments eas ebs =
+  let match_dots ea =
+    match A.unwrap ea with
+      A.Strdots(mcode) -> Some (mcode, None)
+    |  _ -> None in
+  let build_dots (mcode,_) = A.Strdots(mcode) in
+  let match_comma ea = None in
+  let build_comma _ = failwith "no commas" in
+  let match_metalist ea =
+    match A.unwrap ea with
+      A.MetaFormatList(pct,ida,leninfo,constraints,keep,inherited) ->
+        Some(ida,leninfo,constraints,keep,inherited,None)
+    |  _ -> None in
+  let build_metalist ea (ida,leninfo,constraints,keep,inherited) =
+    match A.unwrap ea with
+      A.MetaFormatList(pct,_,_,_,_,_) ->
+	A.MetaFormatList(pct,ida,leninfo,constraints,keep,inherited)
+    | _ -> failwith "build metalist: not possible" in
+  let mktermval v = Ast_c.MetaFragListVal v in
+  let list_filter_function l =
+    Some
+      (List.filter
+	 (function
+	     B.FormatFragment _,_ -> true
+	   | _ -> false)
+	 l) in
+  let special_cases ea eas ebs = None in
+  list_matcher match_dots build_dots match_comma build_comma
+    match_metalist build_metalist mktermval
+    special_cases string_fragment X.distrf_fragments
+    B.split_nocomma B.unsplit_nocomma
+    Lib_parsing_c.ii_of_fragments list_filter_function eas ebs in
+
 let rec (expression: (A.expression, Ast_c.expression) matcher) =
  fun ea eb ->
    if A.get_test_exp ea && not (Ast_c.is_test eb) then
@@ -1738,7 +1794,6 @@ let rec (expression: (A.expression, Ast_c.expression) matcher) =
         expb
           ))
 
-
   | A.Edots (_, Some expr), _    -> failwith "not handling when on Edots"
 
 
@@ -1749,9 +1804,6 @@ let rec (expression: (A.expression, Ast_c.expression) matcher) =
         ((A.Ident ida)) +> wa,
         ((B.Ident (nameidb), typ),Ast_c.noii)
           ))
-
-
-
 
   | A.MetaErr _,     _ -> failwith "not handling MetaErr"
 
@@ -2294,62 +2346,6 @@ and (eoption:
 	  return (t1,t2)
       | _ -> option f t1 t2)
   | _ -> option f t1 t2
-
-and string_fragments eas ebs =
-  let match_dots ea =
-    match A.unwrap ea with
-      A.Strdots(mcode) -> Some (mcode, None)
-    |  _ -> None in
-  let build_dots (mcode,_) = A.Strdots(mcode) in
-  let match_comma ea = None in
-  let build_comma _ = failwith "no commas" in
-  let match_metalist ea =
-    match A.unwrap ea with
-      A.MetaFormatList(pct,ida,leninfo,constraints,keep,inherited) ->
-        Some(ida,leninfo,constraints,keep,inherited,None)
-    |  _ -> None in
-  let build_metalist ea (ida,leninfo,constraints,keep,inherited) =
-    match A.unwrap ea with
-      A.MetaFormatList(pct,_,_,_,_,_) ->
-	A.MetaFormatList(pct,ida,leninfo,constraints,keep,inherited)
-    | _ -> failwith "build metalist: not possible" in
-  let mktermval v = Ast_c.MetaFragListVal v in
-  let list_filter_function l =
-    Some
-      (List.filter
-	 (function
-	     B.FormatFragment _,_ -> true
-	   | _ -> false)
-	 l) in
-  let special_cases ea eas ebs = None in
-  list_matcher match_dots build_dots match_comma build_comma
-    match_metalist build_metalist mktermval
-    special_cases string_fragment X.distrf_fragments
-    B.split_nocomma B.unsplit_nocomma
-    Lib_parsing_c.ii_of_fragments list_filter_function eas ebs
-
-and string_fragment ea (eb,ii) =
-  X.all_bound (A.get_inherited ea) >&&>
-  let wa x = A.rewrap ea x in
-  match A.unwrap ea,eb with
-    A.ConstantFragment(str1), B.ConstantFragment(str2)
-      when A.unwrap_mcode str1 = str2 ->
-      let ib1 = tuple_of_list1 ii in
-      tokenf str1 ib1 >>= (fun str1 ib1 ->
-	return
-	  (A.ConstantFragment(str1) +> wa,
-	   (B.ConstantFragment(str2),[ib1])))
-  | A.FormatFragment(pct1,fmt1), B.FormatFragment(fmt2) ->
-      let ib1 = tuple_of_list1 ii in
-      tokenf pct1 ib1 >>= (fun pct1 ib1 ->
-      string_format fmt1 fmt2 >>= (fun fmt1 fmt2 ->
-	return
-	  (A.FormatFragment(pct1,fmt1) +> wa,
-	   (B.FormatFragment(fmt2), [ib1]))))
-  | A.Strdots dots, eb -> failwith "string_fragment: strdots: not possible"
-  | A.MetaFormatList(pct1,name1,lenname1,_,_,_), eb ->
-      failwith "string_fragment: meta format list: not possible"
-  | _,_ -> fail
 
 (* ------------------------------------------------------------------------- *)
 
