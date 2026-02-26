@@ -11,7 +11,7 @@ let caller s f a =
   let str = ref ([] : string list) in
   let pr_elem info = str := (Ast_c.str_of_info info) :: !str in
   let pr_sp _ = () in
-  f ~pr_elem ~pr_space:pr_sp a;
+  f ~pr_elem ~pr_space:pr_sp a; 
   String.concat s (List.rev !str)
 
 let callernl s f a =
@@ -55,47 +55,48 @@ let fieldlistrep =
     (function x -> x)
 
 let stringrep = function
-  Ast_c.MetaIdVal        s -> s
-| Ast_c.MetaAssignOpVal op -> call_pretty Pretty_print_c.pp_assignOp_gen op
-| Ast_c.MetaBinaryOpVal op -> call_pretty Pretty_print_c.pp_binaryOp_gen op
-| Ast_c.MetaPragmaInfoVal v -> Ast_c.str_of_info v
-| Ast_c.MetaFuncVal      s -> s
-| Ast_c.MetaLocalFuncVal s -> s
-| Ast_c.MetaExprVal      (_,expr,_,_) -> exprrep expr
-| Ast_c.MetaExprListVal  (_,expr_list) ->
+  Ast_c.MetaIdVal        s -> Printf.sprintf "MetaIdVal %s" s
+| Ast_c.MetaAssignOpVal op -> call_pretty Pretty_print_c.pp_assignOp_gen op (* todo *)
+| Ast_c.MetaBinaryOpVal op -> call_pretty Pretty_print_c.pp_binaryOp_gen op (* todo *)
+| Ast_c.MetaPragmaInfoVal v -> Ast_c.str_of_info v (* todo *)
+| Ast_c.MetaFuncVal      s -> Printf.sprintf "MetaFuncVal %s" s
+| Ast_c.MetaLocalFuncVal s -> Printf.sprintf "MetaLocalFuncVal %s" s
+| Ast_c.MetaExprVal      (_,expr,_,_) ->
+    Printf.sprintf "MetaExprVal(_,%s,_,_)" (Pretty_print_c.pp_expression_new_simple expr)
+| Ast_c.MetaExprListVal  (_,expr_list) ->(* todo *)
     call_pretty Pretty_print_c.pp_arg_list_gen expr_list
-| Ast_c.MetaTypeVal      (_,typ) -> call_pretty Pretty_print_c.pp_type_gen typ
-| Ast_c.MetaInitVal      (_,ini) -> call_pretty Pretty_print_c.pp_init_gen ini
-| Ast_c.MetaInitListVal  (newlines,_,ini) ->
+| Ast_c.MetaTypeVal      (_,typ) -> call_pretty Pretty_print_c.pp_type_gen typ(* todo *)
+| Ast_c.MetaInitVal      (_,ini) -> call_pretty Pretty_print_c.pp_init_gen ini(* todo *)
+| Ast_c.MetaInitListVal  (newlines,_,ini) ->(* todo *)
     call_pretty Pretty_print_c.pp_init_list_gen (newlines,ini)
-| Ast_c.MetaDeclVal      (_,decl) ->
+| Ast_c.MetaDeclVal      (_,decl) -> (* todo *)
     call_pretty Pretty_print_c.pp_decl_gen decl
-| Ast_c.MetaFieldVal      (_,field) ->
+| Ast_c.MetaFieldVal      (_,field) -> (* todo *)
     call_pretty Pretty_print_c.pp_field_gen field
-| Ast_c.MetaFieldListVal      (_,field) ->
+| Ast_c.MetaFieldListVal      (_,field) ->(* todo *)
     call_pretty Pretty_print_c.pp_field_list_gen field
-| Ast_c.MetaStmtVal      (_,statement,_) ->
+| Ast_c.MetaStmtVal      (_,statement,_) ->(* todo *)
     call_pretty Pretty_print_c.pp_statement_gen statement
-| Ast_c.MetaStmtListVal  (_,statxs,_) ->
+| Ast_c.MetaStmtListVal  (_,statxs,_) ->(* todo *)
     call_pretty_nl Pretty_print_c.pp_statement_seq_list_gen statxs
-| Ast_c.MetaParamVal     (_,param) ->
+| Ast_c.MetaParamVal     (_,param) ->(* todo *)
     call_pretty Pretty_print_c.pp_param_gen param
-| Ast_c.MetaParamListVal (_,params) ->
+| Ast_c.MetaParamListVal (_,params) ->(* todo *)
     call_pretty Pretty_print_c.pp_param_list_gen params
-| Ast_c.MetaTemplateParamVal     (_,param) ->
+| Ast_c.MetaTemplateParamVal     (_,param) ->(* todo *)
     call_pretty Pretty_print_c.pp_template_param_gen param
-| Ast_c.MetaTemplateParamListVal (_,params) ->
+| Ast_c.MetaTemplateParamListVal (_,params) ->(* todo *)
     call_pretty Pretty_print_c.pp_template_param_list_gen params
-| Ast_c.MetaDParamListVal params ->
+| Ast_c.MetaDParamListVal params ->(* todo *)
     call_pretty Pretty_print_c.pp_define_param_list_gen params
-| Ast_c.MetaFragListVal frags ->
+| Ast_c.MetaFragListVal frags ->(* todo *)
     call_pretty0 Pretty_print_c.pp_string_fragment_list_gen frags
-| Ast_c.MetaFmtVal fmt ->
+| Ast_c.MetaFmtVal fmt ->(* todo *)
     call_pretty0 Pretty_print_c.pp_string_format_gen fmt
-| Ast_c.MetaAttrArgVal (_,name) ->
+| Ast_c.MetaAttrArgVal (_,name) ->(* todo *)
     call_pretty0 Pretty_print_c.pp_attr_arg_gen name
-| Ast_c.MetaListlenVal n -> string_of_int n
-| Ast_c.MetaPosVal (pos1, pos2) ->
+| Ast_c.MetaListlenVal n -> string_of_int n(* todo *)
+| Ast_c.MetaPosVal (pos1, pos2) ->(* todo *)
     let print_pos = function
 	Ast_cocci.Real x -> string_of_int x
       | Ast_cocci.Virt(x,off) -> Printf.sprintf "%d+%d" x off in

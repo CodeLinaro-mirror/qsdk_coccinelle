@@ -157,7 +157,7 @@ and pp_binding2_ctlsubst subst =
     pp "]";
   end
 
-let predicate_to_string pred =
+let predicate_to_string pred = (* unused? *)
   Common.format_to_string (function _ -> pp_predicate pred)
 
 

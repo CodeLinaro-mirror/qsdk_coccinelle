@@ -927,6 +927,7 @@ module Pretty_print_c :
       attr_arg : Ast_c.attr_arg printer;
       flow : Control_flow_c.node printer;
       name : Ast_c.name printer;
+      expression_new : Ast_c.expression -> string;
     }
     val mk_pretty_printers :
       pr_elem:Ast_c.info printer ->
