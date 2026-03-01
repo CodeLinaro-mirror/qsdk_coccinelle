@@ -441,7 +441,8 @@ val noInIfdef : unit -> bool ref
 val reset_nonpos : unit -> unit
 val fakeInfo : befaft -> info
 val fakeBeforeInfo : unit -> info
-val fakeAfterInfo : unit -> info
+val fakeAfterInfo : int -> info
+val fakeAfterInfo_ii : int -> int -> int -> info
 val fakeAfterInfoNoPos : unit -> info
 val noii : 'a list
 val noattr : 'a list

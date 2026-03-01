@@ -238,9 +238,9 @@ let (fake_function_type:
    fullType option -> argument wrap2 list -> fullType option) =
  fun rettype args ->
 
-  let fake = Ast_c.fakeAfterInfo() in
+  let fake = Ast_c.fakeAfterInfo 20 in
   let fake_oparen = Ast_c.rewrap_str "(" fake in
-  let fake = Ast_c.fakeAfterInfo() in
+  let fake = Ast_c.fakeAfterInfo 21 in
   let fake_cparen = Ast_c.rewrap_str ")" fake in
 
   let (tyargs: parameterType wrap2 list) =

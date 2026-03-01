@@ -1026,12 +1026,29 @@ let no_virt_pos _ =
   nonpos := !nonpos - 1;
   ({str="";charpos=0;line=0;column=0;file=""},!nonpos)
 
+let no_virt_pos_s s =
+  nonpos := !nonpos - 1;
+  ({str=s;charpos=0;line=0;column=0;file=""},!nonpos)
+
+let no_virt_pos_ii charpos linepos colpos =
+  nonpos := !nonpos - 1;
+  ({str="";charpos=charpos;line=linepos;column=colpos;file=""},!nonpos)
+
 (* for types only *)
 let no_virt_pos_no_pos _ =
   ({str="";charpos=0;line=0;column=0;file=""},0)
 
 let fakeInfo befaft =
   { pinfo = FakeTok ("",no_virt_pos(),befaft);
+    cocci_tag = ref emptyAnnot;
+    annots_tag = Token_annot.empty;
+    comments_tag = ref emptyComments;
+    danger = ref NoDanger;
+  }
+
+let fakeInfo_ii befaft charpos linepos colpos =
+  let s = match befaft with Before -> "before" | After -> "after" in
+  { pinfo = FakeTok (s,no_virt_pos_ii charpos linepos colpos,befaft);
     cocci_tag = ref emptyAnnot;
     annots_tag = Token_annot.empty;
     comments_tag = ref emptyComments;
@@ -1049,7 +1066,8 @@ let fakeInfoNoPos befaft =
 (* before fake tokens can be moved over whitespace in unparser.
 after fake tokens don't move, stay at the end of something. *)
 let fakeBeforeInfo _ = fakeInfo Before
-let fakeAfterInfo _  = fakeInfo After
+let fakeAfterInfo n  = fakeInfo After
+let fakeAfterInfo_ii charpos linepos colpos = fakeInfo_ii After charpos linepos colpos
 let fakeAfterInfoNoPos _  = fakeInfoNoPos After
 
 let noii = []
@@ -1166,9 +1184,6 @@ let get_orig_info f ii =
   | FakeTok (_,(pi,_),_) -> f pi
   | AbstractLineTok pi -> f pi
 
-let make_expanded ii =
-  {ii with pinfo = ExpandedTok (get_opi ii.pinfo,no_virt_pos())}
-
 let pos_of_info   ii = get_info      (function x -> x.Common.charpos) ii
 let opos_of_info  ii = get_orig_info (function x -> x.Common.charpos) ii
 let line_of_info  ii = get_orig_info (function x -> x.Common.line)    ii
@@ -1177,6 +1192,12 @@ let file_of_info  ii = get_orig_info (function x -> x.Common.file)    ii
 let mcode_of_info ii = fst (mcode_and_env_of_cocciref ii.cocci_tag)
 let pinfo_of_info ii = ii.pinfo
 let parse_info_of_info ii = get_pi ii.pinfo
+
+let make_expanded ii =
+  let charpos = opos_of_info ii in
+  let linepos = line_of_info ii in
+  let colpos = col_of_info ii in
+  {ii with pinfo = ExpandedTok (get_opi ii.pinfo,no_virt_pos_ii charpos linepos colpos)}
 
 let strloc_of_info ii =
   spf "%s:%d" (file_of_info ii) (line_of_info ii)
