@@ -136,7 +136,7 @@ let mk_pretty_printers
 
     (match exp, ii with
 
-    | Ident (ident),         []     -> 
+    | Ident (ident),         []     ->
         Printf.sprintf "Ident(%s)" (pp_name_new ident)
 
     (* only a MultiString can have multiple ii *)
@@ -152,7 +152,7 @@ let mk_pretty_printers
       let str_i1 = pr_elem_new i1 in
       let str_i2 = pr_elem_new i2 in
       Printf.sprintf "StringConstant(%s,%s,w),[%s;%s]" str_s os str_i1 str_i2
-  
+
     | FunCall  (e, es),     [i1;i2] ->
         let str_e = pp_expression_new e in
         let str_i1 = pr_elem_new i1 in
@@ -161,7 +161,7 @@ let mk_pretty_printers
         Printf.sprintf "FunCall(%s, %s), [%s;%s]" str_e str_es str_i1 str_i2
 
     | CondExpr (e1, e2, e3),    [i1;i2]    ->
-        let str_e2 = match e2 with 
+        let str_e2 = match e2 with
           None -> ""
         | Some x -> pp_expression_new x in
         Printf.sprintf "CondExpr(%s, %s, %s), [%s;%s]"
@@ -198,7 +198,7 @@ let mk_pretty_printers
         Printf.sprintf "RecordPtAccess(%s, %s), [%s]" (pp_expression_new e) (pp_name_new name) (pr_elem_new i1)
 
     | QualifiedAccess(typ, name),   [i1] ->
-        let str_typ = match typ with 
+        let str_typ = match typ with
           None -> ""
         | Some x -> pp_type_new x in
         Printf.sprintf "QualifiedAccess(%s, %s), [%s]" (str_typ) (pp_name_new name) (pr_elem_new i1)
@@ -245,7 +245,7 @@ let mk_pretty_printers
         Printf.sprintf "TupleExpr(%s), []" (pp_init_new init)
 
     | Defined name, [i1] ->
-        Printf.sprintf "Defined %s, [%s]" (pp_name_new name) (pr_elem_new i1) 
+        Printf.sprintf "Defined %s, [%s]" (pp_name_new name) (pr_elem_new i1)
 
     | Defined name, [i1;i2;i3] ->
         Printf.sprintf "Defined %s, [%s;%s;%s]" (pp_name_new name) (pr_elem_new i1) (pr_elem_new i2) (pr_elem_new i3)
@@ -258,25 +258,8 @@ let mk_pretty_printers
     | StatementExpr (_) | Constructor _
     | ParenExpr (_) | New (_) | Delete (_,_) | TemplateInst(_,_) | TupleExpr(_)
     | CoAwaitYield (_)
-    | Defined (_)),_ -> "raise (Impossible 95)" (* TODO simply remove the quotation marks *)
+    | Defined (_)),_ -> raise (Impossible 95)
     )
-
-          (* TODO do i include this?
-        if !Flag_parsing_c.pretty_print_type_info
-        then begin
-          pr_text "/*";
-          let alt =
-      redo (fun x -> pr_text (Ast_c.str_of_info x)) in
-          !typ +>
-          (fun (ty,_test) -> ty +>
-      Common.do_option
-        (fun (x,l) -> alt.ty x;
-          let s = match l with
-            Ast_c.LocalVar _ -> ", local"
-          | _ -> "" in
-          pr_text s));
-          pr_text "*/"
-        end *)
 
   and pr_assignOp_new (_,ii) =
     let i = Common.tuple_of_list1 ii in
@@ -285,7 +268,7 @@ let mk_pretty_printers
   and pr_binaryOp_new (_,ii) =
     let i = Common.tuple_of_list1 ii in
     Ast_c.str_of_info i
-  
+
   and pr_unaryOp_new = function
     Ast_c.GetRef -> "GetRef"
   | Ast_c.GetRefLabel -> "GetRefLabel"
@@ -360,10 +343,9 @@ let mk_pretty_printers
       ConstantFormat(str), ii ->
         let (i) = Common.tuple_of_list1 ii in
         Printf.sprintf "ConstantFormat(%s), %s" str (pr_elem_new i)
-  
+
   and pp_statement_seq_list_new statxs =
-    "TODO pp_statement_seq_list_new statxs " (* todo*)
-    (*      statxs +> Common.print_between pr_nl pp_statement_seq  *)
+    list_to_str pp_statement_seq_new statxs
 
   and str_eopt eopt = match eopt with
       None -> ""
@@ -387,11 +369,11 @@ let mk_pretty_printers
         Printf.sprintf "ExprStatement(None), [%s]" (pr_elem_new i)
     | ExprStatement (None), [] ->
         Printf.sprintf "ExprStatement(None), []"
-    | ExprStatement (Some e), [i] -> 
+    | ExprStatement (Some e), [i] ->
         (* the last ExprStatement of a for does not have a trailing
            ';' hence the [] for ii *)
         Printf.sprintf "ExprStatement(Some %s), [%s]" (pp_expression_new e) (pr_elem_new i)
-    | ExprStatement (Some e), [] -> 
+    | ExprStatement (Some e), [] ->
         Printf.sprintf "ExprStatement(Some %s), []" (pp_expression_new e)
     | Selection  (If (e, st1, st2)), i1::i2::i3::is ->
         Printf.sprintf "Selection(If (%s, %s, %s)), %s::%s::%s::%s"
@@ -408,7 +390,7 @@ let mk_pretty_printers
             Printf.sprintf "((%s,%s), %s)" (pp_param_new param) (pp_statement_new st) (elem_list_to_str ii) in
         let str_cal = list_to_str helper cal in
         Printf.sprintf "Selection(TryCatch(%s, %s)), [%s;%s]" (pp_statement_new st) (str_cal) (pr_elem_new it) (pr_elem_new iifakend)
-    | Selection  (Switch (e, st)), [i1;i2;i3;iifakend] -> 
+    | Selection  (Switch (e, st)), [i1;i2;i3;iifakend] ->
         Printf.sprintf "Selection(Switch (%s, %s)), [%s;%s;%s;%s]"
           (pp_expression_new e) (pp_statement_new st) (pr_elem_new i1) (pr_elem_new i2) (pr_elem_new i3) (pr_elem_new iifakend)
     | Iteration  (While (WhileExp (e), st)), [i1;i2;i3;iifakend] ->
@@ -447,7 +429,7 @@ let mk_pretty_printers
     | Jump (Goto name), ii               ->
         let (i1, i3) = Common.tuple_of_list2 ii in
         Printf.sprintf "Jump(Goto %s), (%s, %s)" (pp_name_new name) (pr_elem_new i1) (pr_elem_new i3)
-    | Jump ((Continue|Break|Return)), [i1;i2] -> 
+    | Jump ((Continue|Break|Return)), [i1;i2] ->
         Printf.sprintf "Jump((Continue|Break|Return)), [%s;%s]" (pr_elem_new i1) (pr_elem_new i2)
     | Jump (ReturnExpr e), [i1;i2] ->
         Printf.sprintf "Jump(ReturnExpr %s), [%s;%s]" (pp_expression_new e) (pr_elem_new i1) (pr_elem_new i2)
@@ -499,20 +481,42 @@ let mk_pretty_printers
     | IfdefStmt ifdef -> Printf.sprintf "IfdefStmt %s" (pp_ifdef_new ifdef)
     | CppDirectiveStmt cpp -> Printf.sprintf "CppDirectiveStmt %s" (pp_directive_new cpp)
     | IfdefStmt2 (ifdef, xxs) -> Printf.sprintf "IfdefStmt2 (%s)" (pp_ifdef_tree_sequence_new ifdef xxs)
-  
 
   (* ifdef XXX elsif YYY elsif ZZZ endif *)
   and pp_ifdef_tree_sequence_new ifdef xxs =
     Printf.sprintf "%s %s" (list_to_str pp_ifdef_new ifdef) (list_to_str (list_to_str pp_statement_seq_new) xxs)
 
   and pp_asmbody_new (string_list, colon_list) =
-    "TODO pp_asmbody (string_list, colon_list)" (* todo *)
+
+    let str_colon_list =
+      list_to_str
+      (fun (Colon xs, ii) ->
+          Printf.sprintf "(Colon %s, %s)"
+          (list_to_str
+          (fun (x,iicomma) ->
+            Printf.sprintf "(%s,%s)" 
+            (match x with
+              | ColonMisc, ii ->
+                Printf.sprintf "ColonMisc, %s" (elem_list_to_str ii)
+              | ColonExpr e, [istring;iopar;icpar] ->
+                (* the following case used to be just raise Impossible, but
+                  the code __asm__ __volatile__ ("dcbz 0, %[input]"
+                                            ::[input]"r"(&coherence_data[i]));
+                  in linux-2.6.34/drivers/video/fsl-diu-fb.c matches this case *)
+                Printf.sprintf "ColonExpr %s, [%s;%s;%s]" (pp_expression_new e) (pr_elem_new istring) (pr_elem_new iopar) (pr_elem_new icpar)
+              | (ColonExpr e), ii ->
+                Printf.sprintf "(ColonExpr %s), %s" (pp_expression_new e) (elem_list_to_str ii))
+            (elem_list_to_str iicomma))
+          xs)
+        (elem_list_to_str ii))
+        colon_list in
+      Printf.sprintf "(%s, %s)" (elem_list_to_str string_list) (str_colon_list)
 
   and pp_exec_code_new = function
     ExecEval name, [colon] ->
-      Printf.sprintf "ExecEval %s, [%s]" (pp_expression_new name) (pr_elem_new colon) 
+      Printf.sprintf "ExecEval %s, [%s]" (pp_expression_new name) (pr_elem_new colon)
   | ExecToken, [tok] ->
-      Printf.sprintf "ExecToken, [%s]" (pr_elem_new tok) 
+      Printf.sprintf "ExecToken, [%s]" (pr_elem_new tok)
   | _ -> raise (Impossible 101)
 
   and (pp_type_with_ident_new: (* todo - currently unused. mostly untweaked. *)
@@ -541,7 +545,7 @@ let mk_pretty_printers
 	    | Array(_,t) -> ptrfront t (* todo *)
 	    | _ -> () (* doesn't start with * *) (* todo *) in
 	  ptrfront ft); (* todo *)
-    
+
       "pp_type_with_ident_rest_new ident ft [] endattrs" (* todo implement this !! *)
 
   and pp_param_new param =
@@ -553,23 +557,57 @@ let mk_pretty_printers
     let str_nameopt = (
       match nameopt with
       | None ->
-          "pp_type_new t" (* todo *)
+          pp_type_new t
       | Some name ->
           "pp_type_with_ident_new (Some (function _ -> pp_name_new name)) None t endattr" (* todo *)
       ) in
     let str_iib = elem_list_to_str iib in
 
-    Printf.sprintf "{p_namei = %s; p_register = (b,%s); p_type=t; p_endattr=endattr}" str_nameopt str_iib
+    Printf.sprintf "{p_namei = %s; p_register = (b,%s); p_type; p_endattr}" str_nameopt str_iib
 
   and pp_type_new t =
     "pp_type_with_ident_new None None t Ast_c.noattr" (* todo *)
 
-  and pp_decl_new param =
-    "TODO pp_decl_new" (* todo *)
+  and pp_decl_new = function
+      | DeclList ((({v_namei = var;
+                    v_type = returnType;
+                    v_storage = storage;
+                    v_attr = attrs;
+                    v_endattr = endattrs;
+                    },[])::xs, has_ender),
+          vfs) ->
+
+        let str_vfs =
+          match vfs with
+            iivirg::ifakestart::iisto when has_ender ->
+              Printf.sprintf "%s::%s::%s" (pr_elem_new iivirg) (pr_elem_new ifakestart) (elem_list_to_str iisto)
+            | ifakestart::iisto ->
+              Printf.sprintf "%s::%s" (pr_elem_new ifakestart) (elem_list_to_str iisto)
+            | _ -> failwith "UsingTypename: wrong number of elements"
+                (* old: iisto +> List.iter pr_elem; *)
+        in
+
+        Printf.sprintf "DeclList ((({v_namei; v_type; v_storage; v_attr = %s; v_endattr = %s; },[])::xs, has_ender), %s)"
+          (pp_attributes_new attrs) (pp_attributes_new endattrs) (str_vfs)
+
+      | MacroDecl ((sto, preattrs, s, es, attrs, true), iis::lp::rp::iiend::ifakestart::iisto) ->
+        Printf.sprintf "MacroDecl ((sto, %s, %s, %s, %s, true), %s::%s::%s::%s::%s::%s)"
+          (pp_attributes_new preattrs) (s) (pp_arg_list_new es) (pp_attributes_new attrs) (pr_elem_new iis) (pr_elem_new lp) (pr_elem_new rp) (pr_elem_new iiend) (pr_elem_new ifakestart) (elem_list_to_str iisto)
+
+      | MacroDecl ((sto, preattrs, s, es, attrs, false), iis::lp::rp::ifakestart::iisto) ->
+        Printf.sprintf "MacroDecl ((sto, %s, %s, %s, %s, false), %s::%s::%s::%s::%s)"
+          (pp_attributes_new preattrs) (s) (pp_arg_list_new es) (pp_attributes_new attrs) (pr_elem_new iis) (pr_elem_new lp) (pr_elem_new rp) (pr_elem_new ifakestart) (elem_list_to_str iisto)
+
+      | MacroDeclInit  ((sto, preattrs, s, es, attrs, ini), iis::lp::rp::eq::iiend::ifakestart::iisto) ->
+        Printf.sprintf "MacroDeclInit ((sto, %s, %s, %s, %s, %s), %s::%s::%s::%s::%s::%s::%s)"
+          (pp_attributes_new preattrs) (s) (pp_arg_list_new es) (pp_attributes_new attrs) (pp_init_new ini) (pr_elem_new iis) (pr_elem_new lp) (pr_elem_new rp) (pr_elem_new eq) (pr_elem_new iiend) (pr_elem_new ifakestart) (elem_list_to_str iisto)
+
+      | (DeclList (_, _) | (MacroDecl _) | (MacroDeclInit _)) ->
+        raise (Impossible 115)
 
   and pp_init_new (init, iinit) =
   match init, iinit with
-      | InitExpr e, [] -> 
+      | InitExpr e, [] ->
           Printf.sprintf "InitExpr %s, []" (pp_expression_new e)
       | InitList xs, i1::i2::iicommaopt ->
           xs +> List.iter (fun (x, ii) ->
@@ -579,7 +617,7 @@ let mk_pretty_printers
             Printf.sprintf "(%s, %s)" (pp_init_new x) (elem_list_to_str ii) in
           let str_xs = list_to_str helper xs in
           Printf.sprintf "InitList %s, %s::%s::%s"
-            (str_xs) (pr_elem_new i1) (pr_elem_new i2) (elem_list_to_str iicommaopt) (* todo *)
+            (str_xs) (pr_elem_new i1) (pr_elem_new i2) (elem_list_to_str iicommaopt)
       | InitListNoBrace xs, iicommaopt ->
           xs +> List.iter (fun (x, ii) ->
             assert (List.length ii <= 1);
@@ -614,6 +652,28 @@ let mk_pretty_printers
     | (DesignatorField _ | DesignatorIndex _ | DesignatorRange _
 	), _ -> raise (Impossible 117)
 
+(* ---------------------- *)
+  and pp_attributes_new attrs =
+    list_to_str pp_attribute_new attrs
+
+  and pp_attribute_new (e,ii) =
+    match (e,ii) with
+      Attribute(a), ii  ->
+        Printf.sprintf "Attribute(%s), %s" (pp_attr_arg_new a) (elem_list_to_str ii)
+    | GccAttribute(args), ii ->
+        Printf.sprintf "GccAttribute(%s), %s" (pp_arg_list_new args) (elem_list_to_str ii)
+    | CxxAttribute(args), ii ->
+        Printf.sprintf "CxxAttribute(%s), %s " (pp_arg_list_new args) (elem_list_to_str ii)
+    | CxxAttributeUsing(atnm, args), ii ->
+        Printf.sprintf "CxxAttributeUsing(%s, %s), %s" (pp_name_new atnm) (pp_arg_list_new args) (elem_list_to_str ii)
+
+  and pp_attr_arg_new (e,ii) =
+    match (e,ii) with
+      MacroAttr(a), ii ->
+        Printf.sprintf "MacroAttr(a), %s" (elem_list_to_str ii)
+    | MacroAttrArgs(attr, args), ii ->
+        Printf.sprintf "MacroAttrArgs(attr, %s), %s" (pp_arg_list_new args) (elem_list_to_str ii)
+
   and pp_def_new def =
     "TODO pp_def" (* todo *)
 
@@ -622,20 +682,72 @@ let mk_pretty_printers
     | IfdefDirective (ifdef, ii) ->
         Printf.sprintf "IfdefDirective (ifdef, %s)" (elem_list_to_str ii)
 
-  and pp_directive_new blabla =
-     "TODO pp_directive" (* todo *)
+  and pp_directive_new = function
+    | Include {i_include = (s, ii);} ->
+      Printf.sprintf "Include {i_include = (s, %s)}" (elem_list_to_str ii)
+    | Define ((s,ii), (defkind, defval)) ->
+      let (idefine,iident,ieol) = Common.tuple_of_list3 ii in
+      pr_elem idefine; pr_space();
+      pr_elem iident; pr_space();
+
+    let str_defval = match defval with
+            DefineExpr e -> Printf.sprintf "DefineExpr %s" (pp_expression_new e)
+            | DefineStmt st -> Printf.sprintf "DefineStmt %s" (pp_statement_new st)
+            | DefineDoWhileZero ((st,e), ii) ->
+                (match ii with
+                | [_;_;_;_] -> ()
+                | _ -> raise (Impossible 119));
+                Printf.sprintf "DefineDoWhileZero ((%s,%s), %s)" (pp_statement_new st) (pp_expression_new e) (elem_list_to_str ii)
+            | DefineFunction def -> Printf.sprintf "DefineFunction %s" (pp_def_new def)
+            | DefineType ty -> Printf.sprintf "DefineType %s" (pp_type_new ty)
+            | DefineAttr a -> Printf.sprintf "DefineAttr %s" (pp_attributes_new a)
+            | DefineText (s, ii) -> Printf.sprintf "DefineText (%s, %s)" (s) (elem_list_to_str ii)
+            | DefineEmpty -> Printf.sprintf "DefineEmpty"
+            | DefineInit ini -> Printf.sprintf "DefineInit %s" (pp_init_new ini)
+            | DefineMulti ss ->  Printf.sprintf "DefineMulti %s" (list_to_str pp_statement_new ss)
+            | DefineTodo -> Printf.sprintf "DefineTodo"
+    in
+    let str_defkind = (match defkind with
+    | DefineVar | Undef -> ();
+      Printf.sprintf "DefineVar | Undef"
+    | DefineFunc (params, ii) ->
+      Printf.sprintf "DefineFunc (%s, %s)" (pp_define_param_list_new params) (elem_list_to_str ii)
+    ) in
+      Printf.sprintf "Define ((%s,%s), (%s, %s))" (s) (elem_list_to_str ii) (str_defkind) (str_defval)
+
+    | Pragma((name,rest), ii) ->
+      Printf.sprintf "Pragma((%s,%s), %s)" (pp_name_new name) (pr_elem_new rest) (elem_list_to_str ii)
+
+    | OtherDirective (ii) ->
+      Printf.sprintf "OtherDirective (%s)" (elem_list_to_str ii)
+
+    | UsingTypename((name,def),ii) ->
+      let _ = match ii with
+        [_;_;_;_] -> ()
+      | [_;_;_] -> ()
+      | _ -> failwith "UsingTypename: wrong number of elements" in
+      Printf.sprintf "UsingTypename((%s,%s),%s)" (pp_name_new name) (pp_type_new def) (elem_list_to_str ii)
+
+    | UsingMember(name,ii) ->
+      Printf.sprintf "UsingMember(%s,%s)" (pp_name_new name) (elem_list_to_str ii)
+
+    | UsingNamespace(name,ii) ->
+      Printf.sprintf "UsingNamespace(%s,%s)" (pp_name_new name) (elem_list_to_str ii)
+
+  and pp_define_param_list_new dparams = (* todo could re-use list function *)
+    "[" ^ (List.fold_left (fun acc (s,iis) -> acc ^ elem_list_to_str iis) ";" dparams) ^ "]"
+
   (* ******************************************************************** *)
 
   and pp_expression = fun ((exp, typ), ii) ->
     (match exp, ii with
-    | Ident (ident),         []     -> 
+    | Ident (ident),         []     ->
       pp_name ident
     (* only a MultiString can have multiple ii *)
     | Constant (MultiString _), is     ->
 
 	is +> Common.print_between pr_space pr_elem
-    | Constant (c),         [i]     -> 
-      pr_elem i
+    | Constant (c),         [i]     ->      pr_elem i
     | StringConstant(s,os,w),  [i1;i2] ->
 	pr_elem i1;
 	s +> (List.iter pp_string_fragment);
