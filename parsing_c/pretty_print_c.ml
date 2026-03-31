@@ -23,6 +23,10 @@ module F = Control_flow_c
 (*****************************************************************************)
 let pr2, pr2_once = Common.mk_pr2_wrappers Flag_parsing_c.verbose_unparsing
 
+let str_opt (pp: 'a -> string) (opt: 'a option) = match opt with
+    None -> ""
+  | Some x -> pp x
+
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
@@ -62,7 +66,8 @@ type pretty_printers = {
   attr_arg        : Ast_c.attr_arg printer;
   flow            : Control_flow_c.node printer;
   name            : Ast_c.name printer;
-  expression_new  : Ast_c.expression -> string
+  expression_new  : Ast_c.expression -> string;
+  decl_new     : Ast_c.declaration -> string;
 }
 
 
@@ -200,24 +205,24 @@ let mk_pretty_printers
     | QualifiedAccess(typ, name),   [i1] ->
         let str_typ = match typ with
           None -> ""
-        | Some x -> pp_type_new x in
+        | Some x -> pp_fullType_new x in
         Printf.sprintf "QualifiedAccess(%s, %s), [%s]" (str_typ) (pp_name_new name) (pr_elem_new i1)
 
     | SizeOfExpr  (e),     [i] ->
         Printf.sprintf "SizeOfExpr(%s), [%s]" (pp_expression_new e) (pr_elem_new i)
 
     | SizeOfType  (t),     [i1;i2;i3] ->
-        Printf.sprintf "SizeOfType(%s), [%s;%s;%s]" (pp_type_new t) (pr_elem_new i1) (pr_elem_new i2) (pr_elem_new i3)
+        Printf.sprintf "SizeOfType(%s), [%s;%s;%s]" (pp_fullType_new t) (pr_elem_new i1) (pr_elem_new i2) (pr_elem_new i3)
 
     | Cast    (t, e),   [i1;i2] ->
-        Printf.sprintf "Cast(%s, %s), [%s;%s]" (pp_type_new t) (pp_expression_new e) (pr_elem_new i1) (pr_elem_new i2)
+        Printf.sprintf "Cast(%s, %s), [%s;%s]" (pp_fullType_new t) (pp_expression_new e) (pr_elem_new i1) (pr_elem_new i2)
 
     | StatementExpr (statxs, [ii1;ii2]),  [i1;i2] ->
         let pr_statxs = list_to_str pp_statement_seq_new statxs in
         Printf.sprintf "StatementExpr(%s, [%s;%s]), [%s;%s]" (pr_statxs) (pr_elem_new ii1) (pr_elem_new ii2) (pr_elem_new i1) (pr_elem_new i2)
 
     | Constructor (t, init), [lp;rp] ->
-        Printf.sprintf "Constructor(%s, %s), [%s;%s]" (pp_type_new t) (pp_init_new init) (pr_elem_new lp) (pr_elem_new rp)
+        Printf.sprintf "Constructor(%s, %s), [%s;%s]" (pp_fullType_new t) (pp_init_new init) (pr_elem_new lp) (pr_elem_new rp)
 
     | ParenExpr (e), [i1;i2] ->
         Printf.sprintf "ParenExpr(%s), [%s;%s]" (pp_expression_new e) (pr_elem_new i1) (pr_elem_new i2)
@@ -230,7 +235,7 @@ let mk_pretty_printers
         let str_init = match init with
           None -> ""
           | Some i -> pp_arg_list_new i in
-        Printf.sprintf "New(%s, %s, %s),    %s::%s" ("pp") (pp_type_new t) (str_init) (pr_elem_new i1) (elem_list_to_str rest)
+        Printf.sprintf "New(%s, %s, %s),    %s::%s" ("pp") (pp_fullType_new t) (str_init) (pr_elem_new i1) (elem_list_to_str rest)
 
     | Delete(false,t), [i1] ->
         Printf.sprintf "Delete(false,%s), [%s]" (pp_expression_new t) (pr_elem_new i1)
@@ -347,10 +352,6 @@ let mk_pretty_printers
   and pp_statement_seq_list_new statxs =
     list_to_str pp_statement_seq_new statxs
 
-  and str_eopt eopt = match eopt with
-      None -> ""
-    | Some e -> pp_expression_new e
-
   and pp_statement_new = fun st ->
     match Ast_c.get_st_and_ii st with
     | Labeled (Label (name, st)), ii ->
@@ -410,11 +411,11 @@ let mk_pretty_printers
       let str_first = (match first with
           ForExp ((e1opt,il1),(e2opt,il2),(e3opt, il3)) ->
             assert (il3 = []);
-            Printf.sprintf "ForExp((%s,%s),(%s,%s),(%s, %s))" (str_eopt e1opt) (elem_list_to_str il1) (str_eopt e2opt) (elem_list_to_str il2) (str_eopt e3opt) ("[]")
+            Printf.sprintf "ForExp((%s,%s),(%s,%s),(%s, %s))" (str_opt pp_expression_new e1opt) (elem_list_to_str il1) (str_opt pp_expression_new e2opt) (elem_list_to_str il2) (str_opt pp_expression_new e3opt) ("[]")
         | ForDecl (decl,(e2opt,il2),(e3opt, il3)) ->
             assert (il3 = []);
             Printf.sprintf "ForDecl(%s,(%s,%s),(%s, %s))"
-              (pp_decl_new decl) (str_eopt e2opt) (elem_list_to_str il2) (str_eopt e3opt) (elem_list_to_str il3)
+              (pp_decl_new decl) (str_opt pp_expression_new e2opt) (elem_list_to_str il2) (str_opt pp_expression_new e3opt) (elem_list_to_str il3)
         | ForRange(decl,ini) ->
             Printf.sprintf "ForRange(%s,%s)" (pp_decl_new decl) (pp_init_new ini)
             )
@@ -519,141 +520,62 @@ let mk_pretty_printers
       Printf.sprintf "ExecToken, [%s]" (pr_elem_new tok)
   | _ -> raise (Impossible 101)
 
-  and (pp_type_with_ident_new: (* todo - currently unused. mostly untweaked. *)
-	 (unit -> unit) option -> (storage * il) option ->
-	   fullType -> attribute list ->  string) =
+ and pp_field_new = function
+      DeclarationField
+	(FieldDeclList(onefield_multivars,iiptvirg::ifakestart::iisto)) ->
+    "todo pp_field_new" (* todo *)
 
-    fun ident sto ft endattrs ->
-      pp_base_type ft sto; (* todo *)
-      let hastype = (* keep *)
-	match (Ast_c.unwrap_typeC ft,sto) with
-	  (NoType,(None|Some((NoSto,false,NoAlign),[]))) ->
-	    false
-	| (FunctionType((_,_,(NoType,_)),_),
-	   (None|Some((NoSto,false,NoAlign),[]))) ->
-	    false
-	| (FunctionType((_,_,(_,[ity])),_),
-	   (None|Some((NoSto,false,NoAlign),[]))) ->
-	    str_of_info ity <> ""
-	| _ -> true in
+  and (pp_fullType_new: fullType -> string) =
+    fun (qu, attr, (ty, iity)) ->
 
-      pp_type_with_ident_rest_new ident ft [] endattrs (* todo implement this !! *)
+      Printf.sprintf "(qu, %s, (%s,%s))"
 
+      (pp_attributes_new attr)
 
-(* used because of DeclList, in    int i,*j[23];  we don't print anymore the
-   int before *j *)
-  and (pp_type_with_ident_rest_new: (unit -> unit) option -> (* todo *)
-    fullType -> attribute list -> attribute list -> string) =
+      (match ty with
+      |	(NoType) -> "(NoType,_)"
+      | (Pointer t)                       -> Printf.sprintf "(Pointer %s)" (pp_fullType_new t)
+      | (ParenType t)                     -> Printf.sprintf "(ParenType %s)" (pp_fullType_new t)
+      | (Array (eopt, t))                 -> Printf.sprintf "(Array (%s, %s))" (str_opt pp_expression_new eopt) (pp_fullType_new t)
+      | (FunctionType (returnt, paramst)) -> Printf.sprintf "(FunctionType (%s, _))" (pp_fullType_new returnt)
 
-    fun ident (((qu, iiqu), attrs, (ty, iity))) extra_attrs endattrs ->
+      | (StructUnion (su, sopt, optfinal, base_classes, fields)) ->
+          Printf.sprintf "(StructUnion (_, %s, %s, %s, %s))"
+            (str_opt (fun s -> s) sopt) (str_opt pr_elem_new optfinal) (pp_list_new pp_base_class_new base_classes) (list_to_str pp_field_new fields)
 
+      | (EnumDef  (typ, base, enumt)) ->
 
-      Printf.sprintf "((qu, %s), %s, (%s)) %s %s"
-      (elem_list_to_str iiqu)
-      (pp_attributes_new attrs)
-      (match ty, iity with
-      (* the work is to do in base_type !! *)
-      | (NoType, iis)                           -> Printf.sprintf "(NoType, iis)" (*todo all of these*)
-      | (BaseType _, iis)                       -> Printf.sprintf "(BaseType _, iis)"
-      | (EnumDef  (sopt, base, enumt), iis)     -> Printf.sprintf "(EnumDef  (sopt, base, enumt), iis)"
-      | (StructUnion (_, sopt, optfinal, base_classes, fields),iis) -> Printf.sprintf "(StructUnion (_, sopt, optfinal, base_classes, fields),iis)"
-      | (StructUnionName (s, structunion), iis) -> Printf.sprintf "(StructUnionName (s, structunion), iis)"
-      | (EnumName  (key, s), iis)               -> Printf.sprintf "(EnumName  (key, s), iis)"
-      | (TypeName (name), iis)                   -> Printf.sprintf "(TypeName (name), iis)"
-      | (Decimal _, iis)                        -> Printf.sprintf "(Decimal _, iis)"
-      | (QualifiedType(_typ,_name), iis)        -> Printf.sprintf "(QualifiedType(_typ,_name), iis)"
-      | (NamedType (_name,_typ), iis)            -> Printf.sprintf "(NamedType (_name,_typ), iis)"
-      | (FieldType (_typ,_,_), iis)             -> Printf.sprintf "(FieldType (_typ,_,_), iis)"
-      | (TypeOfExpr (e), iis)                   -> Printf.sprintf "(TypeOfExpr (e), iis)"
-      | (TypeOfType (e), iis)                   -> Printf.sprintf "(TypeOfType (e), iis)"
-      | (AutoType, _)                           -> Printf.sprintf "(AutoType, _)"
-      | (TemplateType _, _)                     -> Printf.sprintf "(TemplateType _, _)"
+          let enumt_helper = (fun ((name, eopt), iicomma) ->
+            Printf.sprintf "((%s, %s), %s)"
+            (pp_name_new name)
+            (match eopt with
+                  None -> ""
+                | Some x -> (fun (ieq, e) ->
+              Printf.sprintf "(%s, %s)" (pr_elem_new ieq) (pp_expression_new e)
+            ) x)
+            (elem_list_to_str iicomma)
+            ) in
 
-      | (Pointer t, [i]) ->
-        Printf.sprintf "(Pointer %s, [%s])" (pp_type_new t) (pr_elem_new i) (* todo not sure pp_type_new is appropriate here *)
+          let str_enumt = list_to_str enumt_helper enumt in
 
-      (* ugly special case ... todo? maybe sufficient in practice *)
-      | (ParenType ttop, [i1;i2]) ->
-          Printf.sprintf "(ParenType %s, [%s;%s])"
-          (match Ast_c.get_ty_and_ii ttop with
-          | (Pointer t2, [ipointer]) ->
-              Printf.sprintf "(Pointer %s, [%s])"
-              (match t2 with
-              | (q2, attrs, (FunctionType t, ii3)) ->
-                  pp_type_left_new (q2, attrs, mk_tybis (FunctionType t) ii3) (* arbitrary decision: use left, not right *)
-              | q2, attrs, (Array (t1, t2), ii3) ->
-                  (* distinguishes pointer array and pointer to array *)
-                  pp_type_left_new (q2, attrs, mk_tybis (Array (t1, t2)) ii3) (* arbitrary decision: use left, not right *)
-              | _ ->
-                  pr2 "PB PARENTYPE ZARB, I forget about the ()";
-                  pp_type_with_ident_rest_new ident ttop Ast_c.noattr Ast_c.noattr
-              )
-              (pr_elem_new ipointer)
-          (* another ugly special case *)
-          | (Array (eopt,t2 ), [iarray1;iarray2]) ->
-              Printf.sprintf "(Array (%s,(qu, attrs, %s)), [%s;%s])" (str_eopt eopt)
-              (match Ast_c.get_ty_and_ii t2 with
-              | (Pointer t3, [ipointer]) ->
-                  Printf.sprintf "(Pointer %s, [%s])"
-                  (match t3 with
-                  | (q3, attrs, (FunctionType t, iifunc)) -> (* todo - here and elsewhere - is it ok if print_ident ident disappears?*)
-                      pp_type_left_new (q3, attrs, mk_tybis (FunctionType t) iifunc) (* arbitrary decision: use left, not right *)
-                  | _ ->
-                      pr2 "PB PARENTYPE ZARB, I forget about the ()";
-                      pp_type_with_ident_rest_new ident ttop Ast_c.noattr Ast_c.noattr
-                  )
-                  (pr_elem_new ipointer)
-              | _ ->
-                  pr2 "PB PARENTYPE ZARB, I forget about the ()";
-                  pp_type_with_ident_rest_new ident ttop Ast_c.noattr Ast_c.noattr
-              )
-              (pr_elem_new iarray1) (pr_elem_new iarray2)
-          | _t ->
+          Printf.sprintf "(EnumDef (%s, %s, %s))"
+            (pp_fullType_new typ) (str_opt pp_fullType_new base) (str_enumt)
 
-              pr2 "PB PARENTYPE ZARB, I forget about the ()";
-              pp_type_with_ident_rest_new ident ttop Ast_c.noattr Ast_c.noattr
-          )
-          (pr_elem_new i1) (pr_elem_new i2)
+      | (BaseType _) -> Printf.sprintf "(BaseType _)"
+      | (StructUnionName (s, structunion)) -> Printf.sprintf "(StructUnionName (_, _))"
+      | (EnumName  (key, s)) -> Printf.sprintf "(EnumName (_, _))"
+      | (TypeName (name)) -> Printf.sprintf "(TypeName (%s))" (pp_name_new name)
+      | (Decimal(l,p)) -> Printf.sprintf "(Decimal(%s,%s))" (pp_expression_new l) (str_opt pp_expression_new p)
+      | (QualifiedType (typ,name)) -> Printf.sprintf "(QualifiedType (%s,%s))" (str_opt pp_fullType_new typ) (pp_name_new name)
+      | (NamedType (name,typ)) -> Printf.sprintf "(NamedType (%s,%s))" (pp_name_new name) (str_opt pp_fullType_new typ)
+      | (FieldType (t, _, _)) -> Printf.sprintf "(FieldType (%s, _, _))" (pp_fullType_new t)
+      | (TypeOfExpr (e)) ->  Printf.sprintf "(TypeOfExpr (%s))" (pp_expression_new e)
+      | (TypeOfType (t)) -> Printf.sprintf "(TypeOfType (%s))" (pp_fullType_new t)
+      | (AutoType) -> Printf.sprintf "(AutoType)"
+      | (TemplateType(name,es)) -> Printf.sprintf "(TemplateType(%s,%s))" (pp_fullType_new name) (pp_arg_list_new es)
+      )
 
-
-      | (Array (eopt, t), [i1;i2]) ->
-          Printf.sprintf "(Array (%s, %s), [%s;%s])" (str_eopt eopt) (pp_type_new t) (pr_elem_new i1) (pr_elem_new i2) (* todo not sure pp_type_new is appropriate here *)
-
-      | (FunctionType (returnt, paramst), [i1;i2]) ->
-          Printf.sprintf "(FunctionType (%s, paramst), [%s;%s])" (pp_type_new returnt) (pr_elem_new i1) (pr_elem_new i2) (* todo not sure pp_type_new is appropriate here *)
-
-      | (FunctionType _ | Array _ | ParenType _ | Pointer _), _ ->
-          raise (Impossible 109))
-
-      (pp_attributes_new extra_attrs)
-      (pp_attributes_new endattrs)
-
-
-  and (pp_type_left_new: fullType -> string) =
-            fun ((qu, iiqu), attr, (ty, iity)) ->
-              Printf.sprintf "((qu, iiqu), %s, (%s))"
-              (pp_attributes_new attr)
-              (match ty, iity with
-              (NoType,_) -> failwith "pp_type_left: unexpected NoType"
-              | (Pointer t, [i]) -> Printf.sprintf "(Pointer %s, [%s])" (pp_type_left_new t) (pr_elem_new i)
-              | (Array (eopt, t), [i1;i2]) -> Printf.sprintf "(Array (%s, %s), [%s;%s])" (str_eopt eopt) (pp_type_left_new t) (pr_elem_new i1) (pr_elem_new i2)
-              | (FunctionType (returnt, paramst), [i1;i2]) -> Printf.sprintf "(FunctionType (%s, paramst), [%s;%s])" (pp_type_left_new returnt) (pr_elem_new i1) (pr_elem_new i2)
-              | (ParenType t, _) ->  failwith "pp_type_left: unexpected parenType"
-              | (BaseType _, iis)    -> "(BaseType _, iis)"
-              | (EnumDef  (sopt, base, enumt), iis) -> "(EnumDef  (sopt, base, enumt), iis)"
-              | (StructUnion (_, sopt, _, _, fields),iis)  -> "(StructUnion (_, sopt, _, _, fields),iis)"
-              | (StructUnionName (s, structunion), iis) -> "(StructUnionName (s, structunion), iis)"
-              | (EnumName  (key, s), iis) -> "(EnumName  (key, s), iis)"
-              | (TypeName (name), iis) -> "(TypeName (name), iis)"
-              | (Decimal(l,p), iis) -> "(Decimal(l,p), iis)"
-              | (NamedType (_name,_typ), iis) -> "(NamedType (_name,_typ), iis)"
-              | (QualifiedType(_typ,_name), iis) -> "(QualifiedType(_typ,_name), iis)"
-              | FieldType (_, _, _), _ -> "FieldType (_, _, _), _"
-              | TypeOfType _, _ -> "TypeOfType _, _"
-              | TypeOfExpr _, _ -> "TypeOfExpr _, _"
-              | AutoType, _ -> "AutoType, _"
-              | TemplateType _, _ -> "TemplateType _, _"
-              | (FunctionType _ | Array _ | Pointer _), _ -> raise (Impossible 110))
+      (elem_list_to_str iity)
 
   and pp_param_new param =
     let {p_namei = nameopt;
@@ -661,17 +583,7 @@ let mk_pretty_printers
 	  p_type=t;
 	  p_endattr=endattr} = param in
 
-    let str_nameopt = (
-      match nameopt with
-      | None -> pp_type_new t (* todo not sure pp_type_new is appropriate here *)
-      | Some name -> "pp_type_with_ident_new (Some (function _ -> pp_name_new name)) None t endattr" (* todo *)
-      ) in
-    let str_iib = elem_list_to_str iib in
-
-    Printf.sprintf "{p_namei = %s; p_register = (b,%s); p_type; p_endattr}" str_nameopt str_iib
-
-  and pp_type_new t =
-    "pp_type_with_ident_new None None t Ast_c.noattr" (* todo *)
+    Printf.sprintf "{%s; (_,%s); %s; %s}" (str_opt pp_name_new nameopt) (elem_list_to_str iib) (pp_fullType_new t) (pp_attributes_new endattr)
 
   and pp_decl_new = function
       | DeclList ((({v_namei = var;
@@ -692,8 +604,8 @@ let mk_pretty_printers
                 (* old: iisto +> List.iter pr_elem; *)
         in
 
-        Printf.sprintf "DeclList ((({v_namei; v_type; v_storage; v_attr = %s; v_endattr = %s; },[])::xs, has_ender), %s)"
-          (pp_attributes_new attrs) (pp_attributes_new endattrs) (str_vfs)
+        Printf.sprintf "DeclList ((({_; %s; v_storage; %s; %s},[])::xs, has_ender), %s)"
+          (pp_fullType_new returnType) (pp_attributes_new attrs) (pp_attributes_new endattrs) (str_vfs)
 
       | MacroDecl ((sto, preattrs, s, es, attrs, true), iis::lp::rp::iiend::ifakestart::iisto) ->
         Printf.sprintf "MacroDecl ((sto, %s, %s, %s, %s, true), %s::%s::%s::%s::%s::%s)"
@@ -775,7 +687,7 @@ let mk_pretty_printers
   and pp_attr_arg_new (e,ii) =
     match (e,ii) with
       MacroAttr(a), ii ->
-        Printf.sprintf "MacroAttr(a), %s" (elem_list_to_str ii)
+        Printf.sprintf "MacroAttr(_), %s" (elem_list_to_str ii)
     | MacroAttrArgs(attr, args), ii ->
         Printf.sprintf "MacroAttrArgs(attr, %s), %s" (pp_arg_list_new args) (elem_list_to_str ii)
 
@@ -804,7 +716,7 @@ let mk_pretty_printers
                 | _ -> raise (Impossible 119));
                 Printf.sprintf "DefineDoWhileZero ((%s,%s), %s)" (pp_statement_new st) (pp_expression_new e) (elem_list_to_str ii)
             | DefineFunction def -> Printf.sprintf "DefineFunction %s" (pp_def_new def)
-            | DefineType ty -> Printf.sprintf "DefineType %s" (pp_type_new ty)
+            | DefineType ty -> Printf.sprintf "DefineType %s" (pp_fullType_new ty)
             | DefineAttr a -> Printf.sprintf "DefineAttr %s" (pp_attributes_new a)
             | DefineText (s, ii) -> Printf.sprintf "DefineText (%s, %s)" (s) (elem_list_to_str ii)
             | DefineEmpty -> Printf.sprintf "DefineEmpty"
@@ -831,7 +743,7 @@ let mk_pretty_printers
         [_;_;_;_] -> ()
       | [_;_;_] -> ()
       | _ -> failwith "UsingTypename: wrong number of elements" in
-      Printf.sprintf "UsingTypename((%s,%s),%s)" (pp_name_new name) (pp_type_new def) (elem_list_to_str ii)
+      Printf.sprintf "UsingTypename((%s,%s),%s)" (pp_name_new name) (pp_fullType_new def) (elem_list_to_str ii)
 
     | UsingMember(name,ii) ->
       Printf.sprintf "UsingMember(%s,%s)" (pp_name_new name) (elem_list_to_str ii)
@@ -839,8 +751,20 @@ let mk_pretty_printers
     | UsingNamespace(name,ii) ->
       Printf.sprintf "UsingNamespace(%s,%s)" (pp_name_new name) (elem_list_to_str ii)
 
-  and pp_define_param_list_new dparams = (* todo could re-use list function *)
-    "[" ^ (List.fold_left (fun acc (s,iis) -> acc ^ elem_list_to_str iis) ";" dparams) ^ "]"
+  and pp_define_param_list_new dparams =
+    list_to_str (fun (s,iis) -> elem_list_to_str iis) dparams
+
+  and pp_base_class_new (bc,ii) =
+
+    Printf.sprintf "(%s,%s)"
+    (match bc with
+        ClassName name -> Printf.sprintf "ClassName %s" (pp_name_new name)
+      | CPublic name -> Printf.sprintf "CPublic %s" (pp_name_new name)
+      | CProtected name -> Printf.sprintf "CProtected %s" (pp_name_new name)
+      | CPrivate name -> Printf.sprintf "CPrivate %s" (pp_name_new name)
+    )
+    (elem_list_to_str ii)
+
 
   (* ******************************************************************** *)
 
@@ -1580,6 +1504,7 @@ pp_expression e;
 
   and pp_field_list fields = fields +>  Common.print_between pr_nl pp_field
   (* common to fields and top-level variables *)
+
   and firstvar attrs storage var returnType endattrs iisto =
     match var with
     | Some (name, iniopt) -> 
@@ -1594,6 +1519,7 @@ pp_expression e;
 	| Ast_c.ValInit(init,[]) -> pr_space(); pp_init init
 	| Ast_c.ValInit _ -> raise (Impossible 112))
     | None -> pp_type returnType
+
   and restvar iivirg var returnType attrs endattrs =
     match var with
       Some (name,iniopt) ->
@@ -1607,6 +1533,7 @@ pp_expression e;
 	| Ast_c.ValInit(init,[]) -> pr_space(); pp_init init
 	| Ast_c.ValInit _ -> raise (Impossible 113))
     | None -> raise (Impossible 113)
+
   and pp_field = function
       DeclarationField
 	(FieldDeclList(onefield_multivars,iiptvirg::ifakestart::iisto)) ->
@@ -2634,6 +2561,7 @@ pp_expression e1; pr_elem i2;
     flow       = pp_flow;
     name       = pp_name;
     expression_new = pp_expression_new;
+    decl_new   = pp_decl_new;
   } in
   redo pr_elem
 
@@ -2695,8 +2623,9 @@ let pp_attribute_simple  = ppc.attribute
 let pp_attr_arg_simple   = ppc.attr_arg
 let pp_flow_simple       = ppc.flow
 let pp_name              = ppc.name
-(* new pretty printer *)
+(* new pretty printers *)
 let pp_expression_new_simple = ppc.expression_new
+let pp_decl_new          = ppc.decl_new
 
 
 let pp_elem_sp ~pr_elem ~pr_space =

@@ -33,7 +33,9 @@ type pretty_printers = {
   attr_arg        : Ast_c.attr_arg printer;
   flow            : Control_flow_c.node printer;
   name            : Ast_c.name printer;
-  expression_new  : Ast_c.expression -> string
+  expression_new  : Ast_c.expression -> string;
+  decl_new        : Ast_c.declaration -> string
+
 }
 
 val mk_pretty_printers :
@@ -116,6 +118,7 @@ val pp_attr_arg_simple:     Ast_c.attr_arg printer
 
 (* alternate pretty printer*)
 val pp_expression_new_simple:  Ast_c.expression -> string
+val pp_decl_new:          Ast_c.declaration -> string
 
 val debug_info_of_node:
   Control_flow_c.G.key -> Control_flow_c.cflow -> string
