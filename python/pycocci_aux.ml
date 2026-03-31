@@ -69,7 +69,7 @@ let stringrep = function
 | Ast_c.MetaInitVal      (_,ini) -> call_pretty Pretty_print_c.pp_init_gen ini(* todo *)
 | Ast_c.MetaInitListVal  (newlines,_,ini) ->(* todo *)
     call_pretty Pretty_print_c.pp_init_list_gen (newlines,ini)
-| Ast_c.MetaDeclVal      (_,decl) -> (* todo *)
+| Ast_c.MetaDeclVal      (_,decl) ->
     Printf.sprintf "MetaDeclVal(_,%s)" (Pretty_print_c.pp_decl_new decl)
 | Ast_c.MetaFieldVal      (_,field) -> (* todo *)
     call_pretty Pretty_print_c.pp_field_gen field
