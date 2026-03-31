@@ -25,7 +25,7 @@ let pr2, pr2_once = Common.mk_pr2_wrappers Flag_parsing_c.verbose_unparsing
 
 let str_opt (pp: 'a -> string) (opt: 'a option) = match opt with
     None -> ""
-  | Some x -> pp x
+  | Some x -> pp x (* todo - should I return "Some" too? *)
 
 (*****************************************************************************)
 (* Types *)
@@ -301,6 +301,9 @@ let mk_pretty_printers
       | ArgType param -> Printf.sprintf "Right(ArgType(%s))" (pp_param_new param)
       | ArgAction action -> Printf.sprintf "Right(ArgAction(%s))" (pp_action action))
 
+  and pp_params_new (ts, (b, iib)) =
+    Printf.sprintf "(%s, (b, %s))" (pp_param_list_new ts) (elem_list_to_str iib)
+
   and pp_name_new = function
 
     | RegularName (s, ii) ->
@@ -309,7 +312,7 @@ let mk_pretty_printers
 
     | Operator(space_needed,op::ii) ->
       let str_ii = elem_list_to_str ii in
-      Printf.sprintf "Operator(%s,%s::%s)" (Bool.to_string space_needed) (pr_elem_new op) str_ii
+      Printf.sprintf "Operator(%B,%s::%s)" (space_needed) (pr_elem_new op) (str_ii)
 
     | Operator(space_needed,_) ->
       failwith "pretty print: bad operator"
@@ -520,10 +523,63 @@ let mk_pretty_printers
       Printf.sprintf "ExecToken, [%s]" (pr_elem_new tok)
   | _ -> raise (Impossible 101)
 
- and pp_field_new = function
-      DeclarationField
-	(FieldDeclList(onefield_multivars,iiptvirg::ifakestart::iisto)) ->
-    "todo pp_field_new" (* todo *)
+  and pp_v_init_new = function
+      NoInit -> Printf.sprintf "NoInit"
+    | ValInit (init, il) (*initialiser wrap*) -> Printf.sprintf "ValInit (%s, %s)" (pp_init_new init) (elem_list_to_str il)
+
+  and pp_field_new = function
+
+      DeclarationField(FieldDeclList(onefield_multivars,iiptvirg::ifakestart::iisto)) ->
+
+        Printf.sprintf "DeclarationField(FieldDeclList(%s,%s::%s::%s))"
+          (list_to_str
+          (fun x -> (match x with
+            (Simple (storage, attrs, nameopt, typ, endattrs)), iivirg ->
+              (* first var cannot have a preceding ',' *)
+              assert (List.length iivirg = 0);
+              Printf.sprintf "(Simple (storage, %s, %s, %s, %s)), %s"
+                (pp_attributes_new attrs) (str_opt (fun nv -> Printf.sprintf "(%s * %s)" (pp_name_new (fst nv)) (pp_v_init_new (snd nv))) nameopt) (pp_fullType_new typ)
+                (pp_attributes_new endattrs) (elem_list_to_str iivirg)
+
+            | (BitField (nameopt, typ, iidot, expr)), iivirg ->
+              (* first var cannot have a preceding ',' *)
+              assert (List.length iivirg = 0);
+              Printf.sprintf "(BitField (%s, %s, %s, %s)), %s"
+              (str_opt pp_name_new nameopt) (pp_fullType_new typ) (pr_elem_new iidot) (pp_expression_new expr) (elem_list_to_str iivirg)
+          ))
+          onefield_multivars)
+          (pr_elem_new iiptvirg) (pr_elem_new ifakestart) (elem_list_to_str iisto)
+
+    | DeclarationField(FieldDeclList(onefield_multivars,_)) ->
+      failwith "wrong number of tokens"
+
+    | MacroDeclField ((s, es, attrs), ii) ->
+      Printf.sprintf "MacroDeclField ((%s, %s, %s), %s)" (s) (pp_arg_list_new es) (pp_attributes_new attrs) (elem_list_to_str ii)
+
+    | MacroDeclFieldInit ((s, es, attrs, ini), ii) ->
+      Printf.sprintf "MacroDeclFieldInit ((%s, %s, %s, %s), %s)" (s) (pp_arg_list_new es) (pp_attributes_new attrs) (pp_init_new ini) (elem_list_to_str ii)
+
+    | MacroDeclFieldMarker (s, ii) ->
+       Printf.sprintf "MacroDeclFieldMarker (%s, %s)" (s) (elem_list_to_str ii)
+
+    | EmptyField iipttvirg_when_emptyfield ->
+      Printf.sprintf "EmptyField %s" (pr_elem_new iipttvirg_when_emptyfield)
+
+    | CppDirectiveStruct cpp ->
+      Printf.sprintf "CppDirectiveStruct %s" (pp_directive_new cpp)
+
+    | IfdefStruct ifdef ->
+      Printf.sprintf "IfdefStruct %s" (pp_ifdef_new ifdef)
+
+    (* C++ *)
+    | FunctionField def ->
+      Printf.sprintf "FunctionField %s" (pp_def_new def)
+
+    | AccSpec ii ->
+      Printf.sprintf "AccSpec %s" (elem_list_to_str ii)
+
+    | ConstructDestructField cd ->
+      Printf.sprintf "ConstructDestructField %s" (pp_construct_destruct_new cd)
 
   and (pp_fullType_new: fullType -> string) =
     fun (qu, attr, (ty, iity)) ->
@@ -601,11 +657,10 @@ let mk_pretty_printers
             | ifakestart::iisto ->
               Printf.sprintf "%s::%s" (pr_elem_new ifakestart) (elem_list_to_str iisto)
             | _ -> failwith "UsingTypename: wrong number of elements"
-                (* old: iisto +> List.iter pr_elem; *)
         in
 
-        Printf.sprintf "DeclList ((({_; %s; v_storage; %s; %s},[])::xs, has_ender), %s)"
-          (pp_fullType_new returnType) (pp_attributes_new attrs) (pp_attributes_new endattrs) (str_vfs)
+        Printf.sprintf "DeclList ((({_; %s; v_storage; %s; %s},[])::xs, %B), %s)"
+          (pp_fullType_new returnType) (pp_attributes_new attrs) (pp_attributes_new endattrs) (has_ender) (str_vfs)
 
       | MacroDecl ((sto, preattrs, s, es, attrs, true), iis::lp::rp::iiend::ifakestart::iisto) ->
         Printf.sprintf "MacroDecl ((sto, %s, %s, %s, %s, true), %s::%s::%s::%s::%s::%s)"
@@ -691,13 +746,63 @@ let mk_pretty_printers
     | MacroAttrArgs(attr, args), ii ->
         Printf.sprintf "MacroAttrArgs(attr, %s), %s" (pp_arg_list_new args) (elem_list_to_str ii)
 
+(* ---------------------- *)
+  and pp_def_start_new defbis =
+    let {f_name = name;
+          f_type = (returnt, (paramst, (b, iib)));
+          f_storage = sto;
+	        f_constr_inherited = constr_inh;
+          f_body = statxs;
+	  } = defbis in
+
+    Printf.sprintf "{%s; (%s, (%s, (b, %s))); _; _; %s}"
+    (pp_name_new name)
+    (pp_fullType_new returnt)
+    (pp_list_new pp_param_new paramst)
+    (elem_list_to_str iib)
+    (pp_statement_seq_list_new statxs)
+
   and pp_def_new def =
-    "TODO pp_def" (* todo *)
+    let defbis, ii = def in
+    match ii with
+    | iifunc1::iifunc2::i1::i2::ifakestart::ifakeend::isto ->
+      Printf.sprintf "(%s, %s)" (pp_def_start_new defbis) (elem_list_to_str ii)
+    | _ -> raise (Impossible 118)
 
   and pp_ifdef_new ifdef =
     match ifdef with
     | IfdefDirective (ifdef, ii) ->
         Printf.sprintf "IfdefDirective (ifdef, %s)" (elem_list_to_str ii)
+
+  and pp_param_list_new paramst = pp_list_new pp_param_new paramst
+
+  and pp_construct_destruct_new (cd,ii) =
+
+    Printf.sprintf "(%s,%s)"
+      (match cd with
+      | ConstructorDecl (vrtl, s, paramst, final)  ->
+        Printf.sprintf "ConstructorDecl (%s, %s, %s, %s)"
+          (Printf.sprintf "(%B * %s)" ((fst vrtl)) (elem_list_to_str (snd vrtl))) (s) (pp_params_new paramst) (Printf.sprintf "(%B * %s)" ((fst final)) (elem_list_to_str (snd final)))
+
+      | DestructorDecl (vrtl, s, paramst, final)  ->
+        Printf.sprintf "DestructorDecl (%s, %s, %s, %s)"
+          (Printf.sprintf "(%B * %s)" ((fst vrtl)) (elem_list_to_str (snd vrtl))) (s) (pp_params_new paramst) (Printf.sprintf "(%B * %s)" ((fst final)) (elem_list_to_str (snd final)))
+
+      | ConstructorDef (vrtl, s, paramst, constr_init, final, body)  ->
+        let str_constr_init = (function
+          (inits,[i1]) ->
+            let pp_init ((name,args),parens) =
+              Printf.sprintf "((%s,%s),%s)" (pp_name_new name) (pp_arg_list_new args) (elem_list_to_str parens) in
+            Printf.sprintf "(%s,[%s])" (pp_list_new pp_init inits) (pr_elem_new i1)
+          | _ -> "") in
+        Printf.sprintf "ConstructorDef (%s, %s, %s, %s, %s, %s)"
+          (Printf.sprintf "(%B * %s)" ((fst vrtl)) (elem_list_to_str (snd vrtl))) (s) (pp_params_new paramst) (str_constr_init constr_init) (Printf.sprintf "(%B * %s)" ((fst final)) (elem_list_to_str (snd final))) (pp_statement_seq_list_new body)
+
+      | DestructorDef (vrtl, s, paramst, final, body)  ->
+        Printf.sprintf "DestructorDef (%s, %s, %s, %s, %s)"
+          (Printf.sprintf "(%B * %s)" ((fst vrtl)) (elem_list_to_str (snd vrtl))) (s) (pp_params_new paramst) (Printf.sprintf "(%B * %s)" ((fst final)) (elem_list_to_str (snd final))) (pp_statement_seq_list_new body)
+      )
+      (elem_list_to_str ii)
 
   and pp_directive_new = function
     | Include {i_include = (s, ii);} ->
