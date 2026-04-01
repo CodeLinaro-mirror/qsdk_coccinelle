@@ -34,8 +34,26 @@ type pretty_printers = {
   flow            : Control_flow_c.node printer;
   name            : Ast_c.name printer;
   expression_new  : Ast_c.expression -> string;
-  decl_new        : Ast_c.declaration -> string
-
+  decl_new        : Ast_c.declaration -> string;
+  assignOp_new:              Ast_c.assignOp -> string;
+  binaryOp_new:              Ast_c.binaryOp -> string;
+  arg_list_new:              Ast_c.argument Ast_c.wrap2 list -> string;
+  type_new:                  Ast_c.fullType -> string;
+  init_new:                  Ast_c.initialiser -> string;
+  newlines_new:              Ast_c.newlines -> string;
+  init_list_new:             Ast_c.initialiser Ast_c.wrap2 list -> string;
+  field_new:                 Ast_c.field -> string;
+  field_list_new:            Ast_c.field list -> string;
+  statement_new:             Ast_c.statement -> string;
+  statement_seq_list_new:    Ast_c.statement_sequencable list -> string;
+  param_new:                 Ast_c.parameterType -> string;
+  param_list_new:            (Ast_c.parameterType Ast_c.wrap2 list) -> string;
+  template_param_new:        Ast_c.templateParameterType -> string;
+  template_param_list_new:   (Ast_c.templateParameterType Ast_c.wrap2 list) -> string;
+  define_param_list_new:     ((string Ast_c.wrap) Ast_c.wrap2 list) -> string;
+  string_fragment_list_new:  Ast_c.string_fragment list -> string;
+  string_format_new:         Ast_c.string_format -> string;
+  attr_arg_new:              Ast_c.attr_arg -> string;
 }
 
 val mk_pretty_printers :
@@ -116,9 +134,28 @@ val pp_string_format_simple:     Ast_c.string_format printer
 val pp_attribute_simple:     Ast_c.attribute printer
 val pp_attr_arg_simple:     Ast_c.attr_arg printer
 
-(* alternate pretty printer*)
-val pp_expression_new_simple:  Ast_c.expression -> string
-val pp_decl_new:          Ast_c.declaration -> string
+(* alternate pretty printers, used in pycocci_aux TODO *)
+val pp_expression_new:     Ast_c.expression -> string
+val pp_decl_new:                  Ast_c.declaration -> string
+val pr_assignOp_new:              Ast_c.assignOp -> string
+val pr_binaryOp_new:              Ast_c.binaryOp -> string
+val pp_arg_list_new:              Ast_c.argument Ast_c.wrap2 list -> string
+val pp_fullType_new:              Ast_c.fullType -> string
+val pp_init_new:                  Ast_c.initialiser -> string
+val pp_newlines_new:              Ast_c.newlines -> string
+val pp_init_list_new:             Ast_c.initialiser Ast_c.wrap2 list -> string
+val pp_field_new:                 Ast_c.field -> string
+val pp_field_list_new:            Ast_c.field list -> string
+val pp_statement_new:             Ast_c.statement -> string
+val pp_statement_seq_list_new:    Ast_c.statement_sequencable list -> string
+val pp_param_new:                 Ast_c.parameterType -> string
+val pp_param_list_new:            (Ast_c.parameterType Ast_c.wrap2 list) -> string
+val pp_template_param_new:        Ast_c.templateParameterType -> string
+val pp_template_param_list_new:   (Ast_c.templateParameterType Ast_c.wrap2 list) -> string
+val pp_define_param_list_new:     ((string Ast_c.wrap) Ast_c.wrap2 list) -> string
+val pp_string_fragment_list_new:  Ast_c.string_fragment list -> string
+val pp_string_format_new:         Ast_c.string_format -> string
+val pp_attr_arg_new:              Ast_c.attr_arg -> string
 
 val debug_info_of_node:
   Control_flow_c.G.key -> Control_flow_c.cflow -> string

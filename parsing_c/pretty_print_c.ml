@@ -68,6 +68,25 @@ type pretty_printers = {
   name            : Ast_c.name printer;
   expression_new  : Ast_c.expression -> string;
   decl_new     : Ast_c.declaration -> string;
+  assignOp_new:              Ast_c.assignOp -> string;
+  binaryOp_new:              Ast_c.binaryOp -> string;
+  arg_list_new:              Ast_c.argument Ast_c.wrap2 list -> string;
+  type_new:                  Ast_c.fullType -> string;
+  init_new:                  Ast_c.initialiser -> string;
+  newlines_new:              Ast_c.newlines -> string;
+  init_list_new:             Ast_c.initialiser Ast_c.wrap2 list -> string;
+  field_new:                 Ast_c.field -> string;
+  field_list_new:            Ast_c.field list -> string;
+  statement_new:             Ast_c.statement -> string;
+  statement_seq_list_new:    Ast_c.statement_sequencable list -> string;
+  param_new:                 Ast_c.parameterType -> string;
+  param_list_new:            (Ast_c.parameterType Ast_c.wrap2 list) -> string;
+  template_param_new:        Ast_c.templateParameterType -> string;
+  template_param_list_new:   (Ast_c.templateParameterType Ast_c.wrap2 list) -> string;
+  define_param_list_new:     ((string Ast_c.wrap) Ast_c.wrap2 list) -> string;
+  string_fragment_list_new:  Ast_c.string_fragment list -> string;
+  string_format_new:         Ast_c.string_format -> string;
+  attr_arg_new:              Ast_c.attr_arg -> string;
 }
 
 
@@ -346,6 +365,8 @@ let mk_pretty_printers
         let (i) = Common.tuple_of_list1 ii in
         Printf.sprintf "FormatFragment(%s), %s" (pp_string_format_new fmt) (pr_elem_new i)
 
+  and pp_string_fragment_list_new sfl = pp_list2_new pp_string_fragment_new sfl
+
   and pp_string_format_new (e,ii) =
     match (e,ii) with
       ConstantFormat(str), ii ->
@@ -502,6 +523,8 @@ let mk_pretty_printers
 
   and pp_name_vinit_option nameopt =
     (str_opt (fun nv -> Printf.sprintf "%s * %s" (pp_name_new (fst nv)) (pp_v_init_new (snd nv))) nameopt)
+
+  and pp_field_list_new fields = list_to_str pp_field_new fields
 
   and pp_field_new = function
 
@@ -693,6 +716,13 @@ let mk_pretty_printers
       | InitList _ | InitExpr _
 	  ), _ -> raise (Impossible 116)
 
+  and pp_newlines_new newlines =
+    match newlines with
+      Ast_c.Keep -> "Keep"
+    | Ast_c.Compress -> "Compress"
+
+  and pp_init_list_new ini = pp_list_new pp_init_new ini
+
   and pp_designator_new = function
     | DesignatorField (s), [i1; i2] ->
       Printf.sprintf "DesignatorField(%s), [%s; %s]" (s) (pr_elem_new i1) (pr_elem_new i2)
@@ -848,13 +878,24 @@ let mk_pretty_printers
 
     Printf.sprintf "(%s,%s)"
     (match bc with
-        ClassName name -> Printf.sprintf "ClassName %s" (pp_name_new name)
-      | CPublic name -> Printf.sprintf "CPublic %s" (pp_name_new name)
-      | CProtected name -> Printf.sprintf "CProtected %s" (pp_name_new name)
-      | CPrivate name -> Printf.sprintf "CPrivate %s" (pp_name_new name)
+        ClassName name -> Printf.sprintf "ClassName(%s)" (pp_name_new name)
+      | CPublic name -> Printf.sprintf "CPublic(%s)" (pp_name_new name)
+      | CProtected name -> Printf.sprintf "CProtected(%s)" (pp_name_new name)
+      | CPrivate name -> Printf.sprintf "CPrivate(%s)" (pp_name_new name)
     )
     (elem_list_to_str ii)
 
+  and pp_template_param_list_new paramst = pp_list_new pp_template_param_new paramst
+
+  and pp_template_param_new = function
+    TypenameOrClassParam((nm,tyopt),ii) ->
+        Printf.sprintf "TypenameOrClassParam((%s,%s),%s)" (pp_name_new nm) (str_opt pp_fullType_new tyopt) (elem_list_to_str ii)
+
+    | VarNameParam((ty,nm,expopt),ii) ->
+      Printf.sprintf "VarNameParam((%s,%s,%s),%s)" (pp_fullType_new ty) (pp_name_new nm) (str_opt pp_init_new expopt) (elem_list_to_str ii)
+
+    | TemplateParam((params,tmp),ii) ->
+      Printf.sprintf "TemplateParam((%s,%s),%s)" (pp_template_param_list_new params) (pp_template_param_new tmp) (elem_list_to_str ii)
 
   (* ******************************************************************** *)
 
@@ -2652,6 +2693,26 @@ pp_expression e1; pr_elem i2;
     name       = pp_name;
     expression_new = pp_expression_new;
     decl_new   = pp_decl_new;
+    assignOp_new              = pr_assignOp_new;
+    binaryOp_new              = pr_binaryOp_new;
+    arg_list_new              = pp_arg_list_new;
+    type_new                  = pp_fullType_new;
+    init_new                  = pp_init_new;
+    newlines_new              = pp_newlines_new;
+    init_list_new             = pp_init_list_new;
+    field_new                 = pp_field_new;
+    field_list_new            = pp_field_list_new;
+    statement_new             = pp_statement_new;
+    statement_seq_list_new    = pp_statement_seq_list_new;
+    param_new                 = pp_param_new;
+    param_list_new            = pp_param_list_new;
+    template_param_new        = pp_template_param_new;
+    template_param_list_new   = pp_template_param_list_new;
+    define_param_list_new     = pp_define_param_list_new;
+    string_fragment_list_new  = pp_string_fragment_list_new;
+    string_format_new         = pp_string_format_new;
+    attr_arg_new              = pp_attr_arg_new;
+
   } in
   redo pr_elem
 
@@ -2714,9 +2775,27 @@ let pp_attr_arg_simple   = ppc.attr_arg
 let pp_flow_simple       = ppc.flow
 let pp_name              = ppc.name
 (* new pretty printers *)
-let pp_expression_new_simple = ppc.expression_new
-let pp_decl_new          = ppc.decl_new
-
+let pp_expression_new            = ppc.expression_new
+let pp_decl_new                  = ppc.decl_new
+let pr_assignOp_new              = ppc.assignOp_new
+let pr_binaryOp_new              = ppc.binaryOp_new
+let pp_arg_list_new              = ppc.arg_list_new
+let pp_fullType_new              = ppc.type_new
+let pp_init_new                  = ppc.init_new
+let pp_newlines_new              = ppc.newlines_new
+let pp_init_list_new             = ppc.init_list_new
+let pp_field_new                 = ppc.field_new
+let pp_field_list_new            = ppc.field_list_new
+let pp_statement_new             = ppc.statement_new
+let pp_statement_seq_list_new    = ppc.statement_seq_list_new
+let pp_param_new                 = ppc.param_new
+let pp_param_list_new            = ppc.param_list_new
+let pp_template_param_new        = ppc.template_param_new
+let pp_template_param_list_new   = ppc.template_param_list_new
+let pp_define_param_list_new     = ppc.define_param_list_new
+let pp_string_fragment_list_new  = ppc.string_fragment_list_new
+let pp_string_format_new         = ppc.string_format_new
+let pp_attr_arg_new              = ppc.attr_arg_new
 
 let pp_elem_sp ~pr_elem ~pr_space =
   mk_pretty_printers

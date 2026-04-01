@@ -55,52 +55,36 @@ let fieldlistrep =
     (function x -> x)
 
 let stringrep = function
-  Ast_c.MetaIdVal        s -> Printf.sprintf "MetaIdVal %s" s
-| Ast_c.MetaAssignOpVal op -> call_pretty Pretty_print_c.pp_assignOp_gen op (* todo *)
-| Ast_c.MetaBinaryOpVal op -> call_pretty Pretty_print_c.pp_binaryOp_gen op (* todo *)
-| Ast_c.MetaPragmaInfoVal v -> Ast_c.str_of_info v (* todo *)
-| Ast_c.MetaFuncVal      s -> Printf.sprintf "MetaFuncVal %s" s
-| Ast_c.MetaLocalFuncVal s -> Printf.sprintf "MetaLocalFuncVal %s" s
-| Ast_c.MetaExprVal      (_,expr,_,_) ->
-    Printf.sprintf "MetaExprVal(_,%s,_,_)" (Pretty_print_c.pp_expression_new_simple expr)
-| Ast_c.MetaExprListVal  (_,expr_list) ->(* todo *)
-    call_pretty Pretty_print_c.pp_arg_list_gen expr_list
-| Ast_c.MetaTypeVal      (_,typ) -> call_pretty Pretty_print_c.pp_type_gen typ(* todo *)
-| Ast_c.MetaInitVal      (_,ini) -> call_pretty Pretty_print_c.pp_init_gen ini(* todo *)
-| Ast_c.MetaInitListVal  (newlines,_,ini) ->(* todo *)
-    call_pretty Pretty_print_c.pp_init_list_gen (newlines,ini)
-| Ast_c.MetaDeclVal      (_,decl) ->
-    Printf.sprintf "MetaDeclVal(_,%s)" (Pretty_print_c.pp_decl_new decl)
-| Ast_c.MetaFieldVal      (_,field) -> (* todo *)
-    call_pretty Pretty_print_c.pp_field_gen field
-| Ast_c.MetaFieldListVal      (_,field) ->(* todo *)
-    call_pretty Pretty_print_c.pp_field_list_gen field
-| Ast_c.MetaStmtVal      (_,statement,_) ->(* todo *)
-    call_pretty Pretty_print_c.pp_statement_gen statement
-| Ast_c.MetaStmtListVal  (_,statxs,_) ->(* todo *)
-    call_pretty_nl Pretty_print_c.pp_statement_seq_list_gen statxs
-| Ast_c.MetaParamVal     (_,param) ->(* todo *)
-    call_pretty Pretty_print_c.pp_param_gen param
-| Ast_c.MetaParamListVal (_,params) ->(* todo *)
-    call_pretty Pretty_print_c.pp_param_list_gen params
-| Ast_c.MetaTemplateParamVal     (_,param) ->(* todo *)
-    call_pretty Pretty_print_c.pp_template_param_gen param
-| Ast_c.MetaTemplateParamListVal (_,params) ->(* todo *)
-    call_pretty Pretty_print_c.pp_template_param_list_gen params
-| Ast_c.MetaDParamListVal params ->(* todo *)
-    call_pretty Pretty_print_c.pp_define_param_list_gen params
-| Ast_c.MetaFragListVal frags ->(* todo *)
-    call_pretty0 Pretty_print_c.pp_string_fragment_list_gen frags
-| Ast_c.MetaFmtVal fmt ->(* todo *)
-    call_pretty0 Pretty_print_c.pp_string_format_gen fmt
-| Ast_c.MetaAttrArgVal (_,name) ->(* todo *)
-    call_pretty0 Pretty_print_c.pp_attr_arg_gen name
-| Ast_c.MetaListlenVal n -> string_of_int n(* todo *)
-| Ast_c.MetaPosVal (pos1, pos2) ->(* todo *)
+  Ast_c.MetaIdVal        s -> Printf.sprintf "MetaIdVal(%s)" s
+| Ast_c.MetaAssignOpVal op -> Printf.sprintf "MetaAssignOpVal(%s)" (Pretty_print_c.pr_assignOp_new op)
+| Ast_c.MetaBinaryOpVal op -> Printf.sprintf "MetaBinaryOpVal(%s)" (Pretty_print_c.pr_binaryOp_new op)
+| Ast_c.MetaPragmaInfoVal v -> Printf.sprintf "MetaPragmaInfoVal(%s)" (Ast_c.str_of_info v)
+| Ast_c.MetaFuncVal      s -> Printf.sprintf "MetaFuncVal(%s)" s
+| Ast_c.MetaLocalFuncVal s -> Printf.sprintf "MetaLocalFuncVal(%s)" s
+| Ast_c.MetaExprVal      (_,expr,_,_) -> Printf.sprintf "MetaExprVal(_,%s,_,_)" (Pretty_print_c.pp_expression_new expr)
+| Ast_c.MetaExprListVal  (_,expr_list) -> Printf.sprintf "MetaExprListVal(_,%s)" (Pretty_print_c.pp_arg_list_new expr_list)
+| Ast_c.MetaTypeVal      (_,typ) -> Printf.sprintf "MetaTypeVal(_,%s)" (Pretty_print_c.pp_fullType_new typ)
+| Ast_c.MetaInitVal      (_,ini) -> Printf.sprintf "MetaInitVal(_,%s)" (Pretty_print_c.pp_init_new ini)
+| Ast_c.MetaInitListVal  (newlines,_,ini) -> Printf.sprintf "MetaInitListVal(%s,_,%s)" (Pretty_print_c.pp_newlines_new newlines) (Pretty_print_c.pp_init_list_new ini)
+| Ast_c.MetaDeclVal      (_,decl) -> Printf.sprintf "MetaDeclVal(_,%s)" (Pretty_print_c.pp_decl_new decl)
+| Ast_c.MetaFieldVal      (_,field) -> Printf.sprintf "MetaFieldVal(_,%s)" (Pretty_print_c.pp_field_new field)
+| Ast_c.MetaFieldListVal      (_,field) -> Printf.sprintf "MetaFieldListVal(_,%s)" (Pretty_print_c.pp_field_list_new field)
+| Ast_c.MetaStmtVal      (_,statement,_) -> Printf.sprintf "MetaStmtVal(_,%s,_)"    (Pretty_print_c.pp_statement_new statement)
+| Ast_c.MetaStmtListVal  (_,statxs,_) -> Printf.sprintf "MetaStmtListVal(_,%s,_)"     (Pretty_print_c.pp_statement_seq_list_new statxs)
+| Ast_c.MetaParamVal     (_,param) -> Printf.sprintf "MetaParamVal(_,%s)"     (Pretty_print_c.pp_param_new param)
+| Ast_c.MetaParamListVal (_,params) -> Printf.sprintf "MetaParamListVal(_,%s)"     (Pretty_print_c.pp_param_list_new params)
+| Ast_c.MetaTemplateParamVal     (_,param) -> Printf.sprintf "MetaTemplateParamVal(_,%s)"     (Pretty_print_c.pp_template_param_new param)
+| Ast_c.MetaTemplateParamListVal (_,params) -> Printf.sprintf "MetaTemplateParamListVal(_,%s)"     (Pretty_print_c.pp_template_param_list_new params)
+| Ast_c.MetaDParamListVal params -> Printf.sprintf "MetaDParamListVal(%s)"     (Pretty_print_c.pp_define_param_list_new params)
+| Ast_c.MetaFragListVal frags -> Printf.sprintf "MetaFragListVal(%s)"     (Pretty_print_c.pp_string_fragment_list_new frags)
+| Ast_c.MetaFmtVal fmt -> Printf.sprintf "MetaFmtVal(%s)"     (Pretty_print_c.pp_string_format_new fmt)
+| Ast_c.MetaAttrArgVal (_,name) -> Printf.sprintf "MetaAttrArgVal(_,%s)"     (Pretty_print_c.pp_attr_arg_new name)
+| Ast_c.MetaListlenVal n -> Printf.sprintf "MetaListlenVal(%i)" n
+| Ast_c.MetaPosVal (pos1, pos2) ->
     let print_pos = function
-	Ast_cocci.Real x -> string_of_int x
+      Ast_cocci.Real x -> string_of_int x
       | Ast_cocci.Virt(x,off) -> Printf.sprintf "%d+%d" x off in
-    Printf.sprintf ("pos(%s,%s)") (print_pos pos1) (print_pos pos2)
+    Printf.sprintf ("MetaPosVal(%s,%s)") (print_pos pos1) (print_pos pos2)
 | Ast_c.MetaPosValList positions -> "TODO: <<postvallist>>"
 | Ast_c.MetaComValList _ -> "TODO: <<postvallist>>"
 | Ast_c.MetaNoVal -> failwith "no value, should not occur"
