@@ -1529,6 +1529,7 @@ module Flag_parsing_c :
     val parsing_header_for_types : bool ref
     val force_kr : bool ref
     val prevent_kr : bool ref
+    val print_internals : bool ref
   end
 module Iteration :
   sig

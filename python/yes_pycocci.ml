@@ -394,7 +394,13 @@ let construct_variables mv e =
     | Some (_,binding) ->
        let _ =
 	 build_variable py
-	   (Py.String.of_string (Pycocci_aux.stringrep binding)) in
+	   (Py.String.of_string
+        (if !Flag_parsing_c.print_internals then
+          (Pycocci_aux.stringrep_internals binding)
+        else
+          (Pycocci_aux.stringrep binding)
+        )
+      ) in 
        ()
     ) mv;
 

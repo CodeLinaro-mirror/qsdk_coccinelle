@@ -340,7 +340,6 @@ let test_type_c infile =
   Common.command2 ("cat " ^ tmpfile);
   ();;
 
-
 (* ---------------------------------------------------------------------- *)
 (* ex: demos/platform_ifdef.c *)
 let test_comment_annotater infile =

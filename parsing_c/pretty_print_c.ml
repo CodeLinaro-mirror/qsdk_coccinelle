@@ -25,7 +25,7 @@ let pr2, pr2_once = Common.mk_pr2_wrappers Flag_parsing_c.verbose_unparsing
 
 let str_opt (pp: 'a -> string) (opt: 'a option) = match opt with
     None -> "None"
-  | Some x -> Printf.sprintf "Some %s" (pp x)
+  | Some x -> Printf.sprintf "Some(%s)" (pp x)
 
 (*****************************************************************************)
 (* Types *)
@@ -187,7 +187,7 @@ let mk_pretty_printers
     | CondExpr (e1, e2, e3),    [i1;i2]    ->
         let str_e2 = match e2 with
           None -> "None"
-        | Some x -> Printf.sprintf "Some %s" (pp_expression_new x) in
+        | Some x -> Printf.sprintf "Some(%s)" (pp_expression_new x) in
         Printf.sprintf "CondExpr(%s, %s, %s), [%s;%s]"
           (pp_expression_new e1) (str_e2) (pp_expression_new e3) (pr_elem_new i1) (pr_elem_new i2;)
 
@@ -224,7 +224,7 @@ let mk_pretty_printers
     | QualifiedAccess(typ, name),   [i1] ->
         let str_typ = match typ with
           None -> "None"
-        | Some x -> Printf.sprintf "Some %s" (pp_fullType_new x) in
+        | Some x -> Printf.sprintf "Some(%s)" (pp_fullType_new x) in
         Printf.sprintf "QualifiedAccess(%s, %s), [%s]" (str_typ) (pp_name_new name) (pr_elem_new i1)
 
     | SizeOfExpr  (e),     [i] ->
@@ -253,7 +253,7 @@ let mk_pretty_printers
     | New   (pp, t, init),    i1::rest ->
         let str_init = match init with
           None -> "None"
-          | Some i -> Printf.sprintf "Some %s" (pp_arg_list_new i) in
+          | Some i -> Printf.sprintf "Some(%s)" (pp_arg_list_new i) in
         Printf.sprintf "New(%s, %s, %s),    %s::%s" ("pp") (pp_fullType_new t) (str_init) (pr_elem_new i1) (elem_list_to_str rest)
 
     | Delete(false,t), [i1] ->
@@ -605,7 +605,7 @@ let mk_pretty_printers
             (pp_name_new name)
             (match eopt with
                   None -> "None"
-                | Some x -> Printf.sprintf "Some %s" ((fun (ieq, e) -> Printf.sprintf "(%s, %s)" (pr_elem_new ieq) (pp_expression_new e)) x)
+                | Some x -> Printf.sprintf "Some(%s)" ((fun (ieq, e) -> Printf.sprintf "(%s, %s)" (pr_elem_new ieq) (pp_expression_new e)) x)
             )
             (elem_list_to_str iicomma)
             ) in
