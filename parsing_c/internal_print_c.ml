@@ -197,7 +197,7 @@ let mk_pretty_printers =
     | StatementExpr (_) | Constructor _
     | ParenExpr (_) | New (_) | Delete (_,_) | TemplateInst(_,_) | TupleExpr(_)
     | CoAwaitYield (_)
-    | Defined (_)),_ -> raise (Impossible 95)
+    | Defined (_)),_ -> raise (Impossible 142)
     )
 
   and pr_assignOp (_,ii) =
@@ -374,7 +374,7 @@ let mk_pretty_printers =
         (match ii with
         | [iasm;iopar;icpar;iptvirg] -> ()
         | [iasm;ivolatile;iopar;icpar;iptvirg] -> ()
-        | _ -> raise (Impossible 97)
+        | _ -> raise (Impossible 143)
         );
         Printf.sprintf "Asm(%s)" (pp_asmbody asmbody)
     | NestedFunc def ->
@@ -430,7 +430,7 @@ let mk_pretty_printers =
       Printf.sprintf "ExecEval(%s), [%s]" (pp_expression name) (pr_elem colon)
   | ExecToken, [tok] ->
       Printf.sprintf "ExecToken, [%s]" (pr_elem tok)
-  | _ -> raise (Impossible 101)
+  | _ -> raise (Impossible 144)
 
   and pp_v_init = function
       NoInit -> Printf.sprintf "NoInit"
@@ -594,7 +594,7 @@ let mk_pretty_printers =
           (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pp_init ini) (pr_elem iis) (pr_elem lp) (pr_elem rp) (pr_elem eq) (pr_elem iiend) (pr_elem ifakestart) (elem_list_to_str iisto)
 
       | ((MacroDecl _) | (MacroDeclInit _)) ->
-        raise (Impossible 115)
+        raise (Impossible 145)
 
   and pp_init (init, iinit) =
   match init, iinit with
@@ -629,7 +629,7 @@ let mk_pretty_printers =
             (pp_expression expression) (pp_init initialiser) (pr_elem i1) (pr_elem i2)
       | (InitIndexOld _ | InitFieldOld _ | InitDesignators _
       | InitList _ | InitExpr _
-	  ), _ -> raise (Impossible 116)
+	  ), _ -> raise (Impossible 146)
 
   and pplines newlines =
     match newlines with
@@ -648,7 +648,7 @@ let mk_pretty_printers =
       Printf.sprintf "DesignatorRange(%s, %s), [%s;%s;%s]"
         (pp_expression e1) (pp_expression e2) (pr_elem iccro) (pr_elem iellipsis) (pr_elem iocro)
     | (DesignatorField _ | DesignatorIndex _ | DesignatorRange _
-	), _ -> raise (Impossible 117)
+	), _ -> raise (Impossible 147)
 
 (* ---------------------- *)
   and pp_attributes (attrs: Ast_c.attribute list) : string =
@@ -693,7 +693,7 @@ let mk_pretty_printers =
     match ii with
     | iifunc1::iifunc2::i1::i2::ifakestart::ifakeend::isto ->
       Printf.sprintf "(%s, %s)" (pp_def_start defbis) (elem_list_to_str ii)
-    | _ -> raise (Impossible 118)
+    | _ -> raise (Impossible 148)
 
   and pp_ifdef ifdef =
     match ifdef with
@@ -745,7 +745,7 @@ let mk_pretty_printers =
             | DefineDoWhileZero ((st,e), ii) ->
                 (match ii with
                 | [_;_;_;_] -> ()
-                | _ -> raise (Impossible 119));
+                | _ -> raise (Impossible 149));
                 Printf.sprintf "DefineDoWhileZero((%s,%s), %s)" (pp_statement st) (pp_expression e) (elem_list_to_str ii)
             | DefineFunction def -> Printf.sprintf "DefineFunction(%s)" (pp_def def)
             | DefineType ty -> Printf.sprintf "DefineType(%s)" (pp_fullType ty)
