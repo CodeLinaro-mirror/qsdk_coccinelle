@@ -58,7 +58,7 @@ SOURCES_parsing_c := \
 	danger.ml parse_c.ml unparse_c.ml unparse_hrule.ml \
 	type_c.ml cpp_ast_c.ml \
 	type_annoter_c.ml comment_annotater_c.ml \
-	compare_c.ml test_parsing_c.ml
+	compare_c.ml test_parsing_c.ml internal_print_c.ml
 SOURCES_ocaml := \
 	externalanalysis.ml \
 	exposed_modules.ml coccilib.ml ocamlcocci_aux.ml $(OCAMLCOCCI_FILE) \

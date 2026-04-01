@@ -927,27 +927,6 @@ module Pretty_print_c :
       attr_arg : Ast_c.attr_arg printer;
       flow : Control_flow_c.node printer;
       name : Ast_c.name printer;
-      expression_new : Ast_c.expression -> string;
-      decl_new : Ast_c.declaration -> string;
-      assignOp_new:              Ast_c.assignOp -> string;
-      binaryOp_new:              Ast_c.binaryOp -> string;
-      arg_list_new:              Ast_c.argument Ast_c.wrap2 list -> string;
-      type_new:                  Ast_c.fullType -> string;
-      init_new:                  Ast_c.initialiser -> string;
-      newlines_new:              Ast_c.newlines -> string;
-      init_list_new:             Ast_c.initialiser Ast_c.wrap2 list -> string;
-      field_new:                 Ast_c.field -> string;
-      field_list_new:            Ast_c.field list -> string;
-      statement_new:             Ast_c.statement -> string;
-      statement_seq_list_new:    Ast_c.statement_sequencable list -> string;
-      param_new:                 Ast_c.parameterType -> string;
-      param_list_new:            (Ast_c.parameterType Ast_c.wrap2 list) -> string;
-      template_param_new:        Ast_c.templateParameterType -> string;
-      template_param_list_new:   (Ast_c.templateParameterType Ast_c.wrap2 list) -> string;
-      define_param_list_new:     ((string Ast_c.wrap) Ast_c.wrap2 list) -> string;
-      string_fragment_list_new:  Ast_c.string_fragment list -> string;
-      string_format_new:         Ast_c.string_format -> string;
-      attr_arg_new:              Ast_c.attr_arg -> string;
     }
     val mk_pretty_printers :
       pr_elem:Ast_c.info printer ->
@@ -1030,6 +1009,33 @@ module Pretty_print_c :
       Control_flow_c.G.key -> Control_flow_c.cflow -> string
     val string_of_expression : Ast_c.expression -> string
     val string_of_fullType : Ast_c.fullType -> string
+  end
+module Internal_print_c :
+  sig
+    type internal_printers =
+    Internal_print_c.internal_printers = {
+      expression : Ast_c.expression -> string;
+      decl : Ast_c.declaration -> string;
+      assignOp:              Ast_c.assignOp -> string;
+      binaryOp:              Ast_c.binaryOp -> string;
+      arg_list:              Ast_c.argument Ast_c.wrap2 list -> string;
+      typ:                   Ast_c.fullType -> string;
+      init:                  Ast_c.initialiser -> string;
+      newlines:              Ast_c.newlines -> string;
+      init_list:             Ast_c.initialiser Ast_c.wrap2 list -> string;
+      field:                 Ast_c.field -> string;
+      field_list:            Ast_c.field list -> string;
+      statement:             Ast_c.statement -> string;
+      statement_seq_list:    Ast_c.statement_sequencable list -> string;
+      param:                 Ast_c.parameterType -> string;
+      param_list:            (Ast_c.parameterType Ast_c.wrap2 list) -> string;
+      template_param:        Ast_c.templateParameterType -> string;
+      template_param_list:   (Ast_c.templateParameterType Ast_c.wrap2 list) -> string;
+      define_param_list:     ((string Ast_c.wrap) Ast_c.wrap2 list) -> string;
+      string_fragment_list:  Ast_c.string_fragment list -> string;
+      string_format:         Ast_c.string_format -> string;
+      attr_arg:              Ast_c.attr_arg -> string;
+    }
   end
 module Lib_parsing_c :
   sig

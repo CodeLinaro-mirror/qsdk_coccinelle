@@ -13,6 +13,8 @@ module Lexer_c  : module type of struct include Lexer_c end
     (* parsing_c/lexer_c.mll *)
 module Pretty_print_c : module type of struct include Pretty_print_c end
     (* parsing_c/pretty_print_c.ml *)
+module Internal_print_c : module type of struct include Internal_print_c end
+    (* parsing_c/internal_print_c.ml *)
 module Lib_parsing_c  : module type of struct include Lib_parsing_c end
     (* parsing_c/lib_parsing_c.ml *)
 module Visitor_c      : module type of struct include Visitor_c end

@@ -7,6 +7,7 @@ module Parse_c  = Parse_c    (* parsing_c/parse_c.ml *)
 module Parser_c = Parser_c   (* parsing_c/parser_c.mly *)
 module Lexer_c  = Lexer_c    (* parsing_c/lexer_c.mll *)
 module Pretty_print_c = Pretty_print_c (* parsing_c/pretty_print_c.ml *)
+module Internal_print_c = Internal_print_c (* parsing_c/internal_print_c.ml *)
 module Lib_parsing_c  = Lib_parsing_c  (* parsing_c/lib_parsing_c.ml *)
 module Visitor_c      = Visitor_c      (* parsing_c/visitor_c.ml *)
 
