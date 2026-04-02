@@ -169,7 +169,7 @@ let mk_pretty_printers =
         let str_init = match init with
           None -> "None"
           | Some i -> Printf.sprintf "Some(%s)" (pp_arg_list i) in
-        Printf.sprintf "New(%s, %s, %s),    %s::%s" ("pp") (pp_fullType t) (str_init) (pr_elem i1) (elem_list_to_str rest)
+        Printf.sprintf "New(_, %s, %s), %s::%s" (pp_fullType t) (str_init) (pr_elem i1) (elem_list_to_str rest)
 
     | Delete(false,t), [i1] ->
         Printf.sprintf "Delete(false,%s), [%s]" (pp_expression t) (pr_elem i1)
@@ -257,7 +257,7 @@ let mk_pretty_printers =
       Printf.sprintf "QualName(%s)" str_xs
 
     | CppConcatenatedName xs ->
-      let helper xs_i = match xs_i with ((x,ii1), ii2) -> Printf.sprintf "((x,%s), %s)" (elem_list_to_str ii1) (elem_list_to_str ii2) in
+      let helper xs_i = match xs_i with ((x,ii1), ii2) -> Printf.sprintf "((_,%s), %s)" (elem_list_to_str ii1) (elem_list_to_str ii2) in
       let str_xs = pp_list2 helper xs in
       Printf.sprintf "CppConcatenatedName(%s)" str_xs
 
@@ -266,7 +266,7 @@ let mk_pretty_printers =
       Printf.sprintf "CppVariadicName(%s, %s)" s str_ii
 
     | CppIdentBuilder ((s,iis), xs) ->
-      let helper xs_i = match xs_i with ((x,iix), iicomma) -> Printf.sprintf "((x,%s), %s)" (elem_list_to_str iix) (elem_list_to_str iicomma) in
+      let helper xs_i = match xs_i with ((x,iix), iicomma) -> Printf.sprintf "((_,%s), %s)" (elem_list_to_str iix) (elem_list_to_str iicomma) in
       let str_xs = pp_list2 helper xs in
       let str_iis = elem_list_to_str iis in
       Printf.sprintf "CppIdentBuilder((%s,%s), %s)" s str_iis str_xs
@@ -303,7 +303,7 @@ let mk_pretty_printers =
         Printf.sprintf "Labeled(CaseRange(%s, %s, %s))"
           (pp_expression e) (pp_expression e2) (pp_statement st)
     | Labeled (Default st) ->
-        Printf.sprintf "Labeled(Default %s)" (pp_statement st)
+        Printf.sprintf "Labeled(Default(%s))" (pp_statement st)
     | Compound statxs ->
         Printf.sprintf "Compound(%s)" (pp_statement_seq_list statxs)
     | ExprStatement (None) ->
@@ -331,7 +331,7 @@ let mk_pretty_printers =
         Printf.sprintf "Iteration(While(WhileExp (%s), %s))"
           (pp_expression e) (pp_statement st)
     | Iteration  (While (WhileDecl (d), st)) ->
-        Printf.sprintf "Iteration(While(WhileDecl (%s), %s))"
+        Printf.sprintf "Iteration(While(WhileDecl(%s), %s))"
           (pp_decl d) (pp_statement st)
     | Iteration  (ScopedGuard (es, st)) ->
         Printf.sprintf "Iteration(ScopedGuard(%s, %s))"
@@ -365,9 +365,9 @@ let mk_pretty_printers =
     | Jump ((Continue|Break|Return)) ->
         Printf.sprintf "Jump((Continue|Break|Return))"
     | Jump (ReturnExpr e) ->
-        Printf.sprintf "Jump(ReturnExpr %s)" (pp_expression e)
+        Printf.sprintf "Jump(ReturnExpr(%s))" (pp_expression e)
     | Jump (GotoComputed e) ->
-        Printf.sprintf "Jump(GotoComputed %s)" (pp_expression e)
+        Printf.sprintf "Jump(GotoComputed(%s))" (pp_expression e)
     | Decl decl ->
         Printf.sprintf "Decl(%s)" (pp_decl decl)
     | Asm asmbody ->
@@ -393,7 +393,7 @@ let mk_pretty_printers =
     | StmtElem st -> Printf.sprintf "StmtElem(%s)" (pp_statement st)
     | IfdefStmt ifdef -> Printf.sprintf "IfdefStmt(%s)" (pp_ifdef ifdef)
     | CppDirectiveStmt cpp -> Printf.sprintf "CppDirectiveStmt(%s)" (pp_directive cpp)
-    | IfdefStmt2 (ifdef, xxs) -> Printf.sprintf "IfdefStmt2 (%s)" (pp_ifdef_tree_sequence ifdef xxs)
+    | IfdefStmt2 (ifdef, xxs) -> Printf.sprintf "IfdefStmt2(%s)" (pp_ifdef_tree_sequence ifdef xxs)
 
   (* ifdef XXX elsif YYY elsif ZZZ endif *)
   and pp_ifdef_tree_sequence ifdef xxs =
@@ -451,7 +451,7 @@ let mk_pretty_printers =
             (Simple (storage, attrs, nameopt, typ, endattrs)), iivirg ->
               (* first var cannot have a preceding ',' *)
               assert (List.length iivirg = 0);
-              Printf.sprintf "(Simple (storage, %s, %s, %s, %s)), %s"
+              Printf.sprintf "(Simple (_, %s, %s, %s, %s)), %s"
                 (pp_attributes attrs) (pp_name_vinit_option nameopt) (pp_fullType typ)
                 (pp_attributes endattrs) (elem_list_to_str iivirg)
 
@@ -506,11 +506,11 @@ let mk_pretty_printers =
       |	(NoType) -> "(NoType,_)"
       | (Pointer t)                       -> Printf.sprintf "Pointer(%s)" (pp_fullType t)
       | (ParenType t)                     -> Printf.sprintf "ParenType(%s)" (pp_fullType t)
-      | (Array (eopt, t))                 -> Printf.sprintf "Array (%s, %s)" (str_opt pp_expression eopt) (pp_fullType t)
+      | (Array (eopt, t))                 -> Printf.sprintf "Array(%s, %s)" (str_opt pp_expression eopt) (pp_fullType t)
       | (FunctionType (returnt, paramst)) -> Printf.sprintf "FunctionType(%s, _))" (pp_fullType returnt)
 
       | (StructUnion (su, sopt, optfinal, base_classes, fields)) ->
-          Printf.sprintf "StructUnion (_, %s, %s, %s, %s)"
+          Printf.sprintf "StructUnion(_, %s, %s, %s, %s)"
             (str_opt (fun s -> s) sopt) (str_opt pr_elem optfinal) (pp_list pp_base_class base_classes) (pp_list2 pp_field fields)
 
       | (EnumDef  (typ, base, enumt)) ->
@@ -527,7 +527,7 @@ let mk_pretty_printers =
 
           let str_enumt = pp_list2 enumt_helper enumt in
 
-          Printf.sprintf "EnumDef (%s, %s, %s)"
+          Printf.sprintf "EnumDef(%s, %s, %s)"
             (pp_fullType typ) (str_opt pp_fullType base) (str_enumt)
 
       | (BaseType _) -> Printf.sprintf "BaseType(_)"
@@ -535,11 +535,11 @@ let mk_pretty_printers =
       | (EnumName  (key, s)) -> Printf.sprintf "EnumName(_, _)"
       | (TypeName (name)) -> Printf.sprintf "TypeName(%s)" (pp_name name)
       | (Decimal(l,p)) -> Printf.sprintf "Decimal(%s,%s)" (pp_expression l) (str_opt pp_expression p)
-      | (QualifiedType (typ,name)) -> Printf.sprintf "QualifiedType (%s,%s)" (str_opt pp_fullType typ) (pp_name name)
-      | (NamedType (name,typ)) -> Printf.sprintf "NamedType (%s,%s)" (pp_name name) (str_opt pp_fullType typ)
-      | (FieldType (t, _, _)) -> Printf.sprintf "FieldType (%s, _, _)" (pp_fullType t)
-      | (TypeOfExpr (e)) ->  Printf.sprintf "TypeOfExpr (%s)" (pp_expression e)
-      | (TypeOfType (t)) -> Printf.sprintf "TypeOfType (%s)" (pp_fullType t)
+      | (QualifiedType (typ,name)) -> Printf.sprintf "QualifiedType(%s,%s)" (str_opt pp_fullType typ) (pp_name name)
+      | (NamedType (name,typ)) -> Printf.sprintf "NamedType(%s,%s)" (pp_name name) (str_opt pp_fullType typ)
+      | (FieldType (t, _, _)) -> Printf.sprintf "FieldType(%s,_,_)" (pp_fullType t)
+      | (TypeOfExpr (e)) ->  Printf.sprintf "TypeOfExpr(%s)" (pp_expression e)
+      | (TypeOfType (t)) -> Printf.sprintf "TypeOfType(%s)" (pp_fullType t)
       | (AutoType) -> Printf.sprintf "AutoType"
       | (TemplateType(name,es)) -> Printf.sprintf "TemplateType(%s,%s)" (pp_fullType name) (pp_arg_list es)
       )
@@ -582,15 +582,15 @@ let mk_pretty_printers =
         Printf.sprintf "DeclList((%s ,%B), %s)" (str_decl_list) (has_ender) (str_vfs)
 
       | MacroDecl ((sto, preattrs, s, es, attrs, true), iis::lp::rp::iiend::ifakestart::iisto) ->
-        Printf.sprintf "MacroDecl((sto, %s, %s, %s, %s, true), %s::%s::%s::%s::%s::%s)"
+        Printf.sprintf "MacroDecl((_, %s, %s, %s, %s, true), %s::%s::%s::%s::%s::%s)"
           (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pr_elem iis) (pr_elem lp) (pr_elem rp) (pr_elem iiend) (pr_elem ifakestart) (elem_list_to_str iisto)
 
       | MacroDecl ((sto, preattrs, s, es, attrs, false), iis::lp::rp::ifakestart::iisto) ->
-        Printf.sprintf "MacroDecl((sto, %s, %s, %s, %s, false), %s::%s::%s::%s::%s)"
+        Printf.sprintf "MacroDecl((_, %s, %s, %s, %s, false), %s::%s::%s::%s::%s)"
           (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pr_elem iis) (pr_elem lp) (pr_elem rp) (pr_elem ifakestart) (elem_list_to_str iisto)
 
       | MacroDeclInit  ((sto, preattrs, s, es, attrs, ini), iis::lp::rp::eq::iiend::ifakestart::iisto) ->
-        Printf.sprintf "MacroDeclInit((sto, %s, %s, %s, %s, %s), %s::%s::%s::%s::%s::%s::%s)"
+        Printf.sprintf "MacroDeclInit((_, %s, %s, %s, %s, %s), %s::%s::%s::%s::%s::%s::%s)"
           (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pp_init ini) (pr_elem iis) (pr_elem lp) (pr_elem rp) (pr_elem eq) (pr_elem iiend) (pr_elem ifakestart) (elem_list_to_str iisto)
 
       | ((MacroDecl _) | (MacroDeclInit _)) ->
@@ -607,7 +607,7 @@ let mk_pretty_printers =
           let helper xs_i = match xs_i with (x, ii) ->
             Printf.sprintf "(%s, %s)" (pp_init x) (elem_list_to_str ii) in
           let str_xs = pp_list2 helper xs in
-          Printf.sprintf "InitList %s, %s::%s::%s"
+          Printf.sprintf "InitList(%s), %s::%s::%s"
             (str_xs) (pr_elem i1) (pr_elem i2) (elem_list_to_str iicommaopt)
       | InitListNoBrace xs, iicommaopt ->
           xs +> List.iter (fun (x, ii) ->
@@ -670,7 +670,7 @@ let mk_pretty_printers =
       MacroAttr(a), ii ->
         Printf.sprintf "MacroAttr(_), %s" (elem_list_to_str ii)
     | MacroAttrArgs(attr, args), ii ->
-        Printf.sprintf "MacroAttrArgs(attr, %s), %s" (pp_arg_list args) (elem_list_to_str ii)
+        Printf.sprintf "MacroAttrArgs(%s, %s), %s" (attr) (pp_arg_list args) (elem_list_to_str ii)
 
 (* ---------------------- *)
   and pp_def_start defbis =
@@ -681,7 +681,7 @@ let mk_pretty_printers =
           f_body = statxs;
 	  } = defbis in
 
-    Printf.sprintf "{%s; (%s, (%s, (b, %s))); _; _; %s}"
+    Printf.sprintf "{%s; (%s, (%s, (_, %s))); _; _; %s}"
     (pp_name name)
     (pp_fullType returnt)
     (pp_list pp_param paramst)
@@ -698,7 +698,7 @@ let mk_pretty_printers =
   and pp_ifdef ifdef =
     match ifdef with
     | IfdefDirective (ifdef, ii) ->
-        Printf.sprintf "IfdefDirective(ifdef, %s)" (elem_list_to_str ii)
+        Printf.sprintf "IfdefDirective(_, %s)" (elem_list_to_str ii)
 
   and pp_param_list paramst = pp_list pp_param paramst
 
@@ -736,7 +736,7 @@ let mk_pretty_printers =
 
   and pp_directive = function
     | Include {i_include = (s, ii);} ->
-      Printf.sprintf "Include {i_include = (s, %s)}" (elem_list_to_str ii)
+      Printf.sprintf "Include {(_, %s)}" (elem_list_to_str ii)
     | Define ((s,ii), (defkind, defval)) ->
 
     let str_defval = match defval with
