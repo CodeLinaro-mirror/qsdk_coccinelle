@@ -245,8 +245,7 @@ let mk_pretty_printers =
         Printf.sprintf "RegularName(%s,%s)" s (pr_elem i1)
 
     | Operator(space_needed,op::ii) ->
-      let str_ii = elem_list_to_str ii in
-      Printf.sprintf "Operator(%B,%s::%s)" (space_needed) (pr_elem op) (str_ii)
+      Printf.sprintf "Operator(%B,%s)" (space_needed) (elem_list_to_str ([op] @ ii))
 
     | Operator(space_needed,_) ->
       failwith "pretty print: bad operator"
@@ -445,7 +444,7 @@ let mk_pretty_printers =
 
       DeclarationField(FieldDeclList(onefield_multivars,iiptvirg::ifakestart::iisto)) ->
 
-        Printf.sprintf "DeclarationField(FieldDeclList(%s,%s::%s::%s))"
+        Printf.sprintf "DeclarationField(FieldDeclList(%s,%s))"
           (pp_list2
           (fun x -> (match x with
             (Simple (storage, attrs, nameopt, typ, endattrs)), iivirg ->
@@ -462,7 +461,7 @@ let mk_pretty_printers =
               (str_opt pp_name nameopt) (pp_fullType typ) (pr_elem iidot) (pp_expression expr) (elem_list_to_str iivirg)
           ))
           onefield_multivars)
-          (pr_elem iiptvirg) (pr_elem ifakestart) (elem_list_to_str iisto)
+          (elem_list_to_str ([iiptvirg;ifakestart] @ iisto))
 
     | DeclarationField(FieldDeclList(onefield_multivars,_)) ->
       failwith "wrong number of tokens"
@@ -572,26 +571,24 @@ let mk_pretty_printers =
 
         let str_vfs =
           match vfs with
-            iivirg::ifakestart::iisto when has_ender ->
-              Printf.sprintf "%s::%s::%s" (pr_elem iivirg) (pr_elem ifakestart) (elem_list_to_str iisto)
-            | ifakestart::iisto ->
-              Printf.sprintf "%s::%s" (pr_elem ifakestart) (elem_list_to_str iisto)
+            iivirg::ifakestart::iisto when has_ender -> elem_list_to_str vfs
+            | ifakestart::iisto -> elem_list_to_str vfs
             | _ -> failwith "UsingTypename: wrong number of elements"
         in
 
         Printf.sprintf "DeclList((%s ,%B), %s)" (str_decl_list) (has_ender) (str_vfs)
 
       | MacroDecl ((sto, preattrs, s, es, attrs, true), iis::lp::rp::iiend::ifakestart::iisto) ->
-        Printf.sprintf "MacroDecl((_, %s, %s, %s, %s, true), %s::%s::%s::%s::%s::%s)"
-          (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pr_elem iis) (pr_elem lp) (pr_elem rp) (pr_elem iiend) (pr_elem ifakestart) (elem_list_to_str iisto)
+        Printf.sprintf "MacroDecl((_, %s, %s, %s, %s, true), %s)"
+          (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (elem_list_to_str ([iis;lp;rp;iiend;ifakestart] @ iisto))
 
       | MacroDecl ((sto, preattrs, s, es, attrs, false), iis::lp::rp::ifakestart::iisto) ->
-        Printf.sprintf "MacroDecl((_, %s, %s, %s, %s, false), %s::%s::%s::%s::%s)"
-          (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pr_elem iis) (pr_elem lp) (pr_elem rp) (pr_elem ifakestart) (elem_list_to_str iisto)
+        Printf.sprintf "MacroDecl((_, %s, %s, %s, %s, false), %s)"
+          (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (elem_list_to_str ([iis;lp;rp;ifakestart] @ iisto))
 
       | MacroDeclInit  ((sto, preattrs, s, es, attrs, ini), iis::lp::rp::eq::iiend::ifakestart::iisto) ->
-        Printf.sprintf "MacroDeclInit((_, %s, %s, %s, %s, %s), %s::%s::%s::%s::%s::%s::%s)"
-          (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pp_init ini) (pr_elem iis) (pr_elem lp) (pr_elem rp) (pr_elem eq) (pr_elem iiend) (pr_elem ifakestart) (elem_list_to_str iisto)
+        Printf.sprintf "MacroDeclInit((_, %s, %s, %s, %s, %s), %s)"
+          (pp_attributes preattrs) (s) (pp_arg_list es) (pp_attributes attrs) (pp_init ini) (elem_list_to_str ([iis;lp;rp;eq;iiend;ifakestart] @ iisto))
 
       | ((MacroDecl _) | (MacroDeclInit _)) ->
         raise (Impossible 145)
@@ -607,8 +604,7 @@ let mk_pretty_printers =
           let helper xs_i = match xs_i with (x, ii) ->
             Printf.sprintf "(%s, %s)" (pp_init x) (elem_list_to_str ii) in
           let str_xs = pp_list2 helper xs in
-          Printf.sprintf "InitList(%s), %s::%s::%s"
-            (str_xs) (pr_elem i1) (pr_elem i2) (elem_list_to_str iicommaopt)
+          Printf.sprintf "InitList(%s), %s" (str_xs) (elem_list_to_str ([i1;i2] @ iicommaopt))
       | InitListNoBrace xs, iicommaopt ->
           xs +> List.iter (fun (x, ii) ->
             assert (List.length ii <= 1);
