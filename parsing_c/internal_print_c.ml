@@ -60,7 +60,7 @@ let mk_pretty_printers =
   let pr_elem info = Ast_c.str_of_info info in
 
   let pp_list2 to_str l = (* no comma case *)
-    "[" ^ (List.fold_left (fun acc x -> acc ^ to_str x) ";" l) ^ "]" in
+    "[" ^ String.concat ";" (List.map (fun x -> Printf.sprintf "\"%s\"" (to_str x)) l) ^ "]" in
 
   let elem_list_to_str l =
     pp_list2 pr_elem l in
@@ -576,7 +576,7 @@ let mk_pretty_printers =
             | _ -> failwith "UsingTypename: wrong number of elements"
         in
 
-        Printf.sprintf "DeclList((%s ,%B), %s)" (str_decl_list) (has_ender) (str_vfs)
+        Printf.sprintf "DeclList((%s, %B), %s)" (str_decl_list) (has_ender) (str_vfs)
 
       | MacroDecl ((sto, preattrs, s, es, attrs, true), iis::lp::rp::iiend::ifakestart::iisto) ->
         Printf.sprintf "MacroDecl((_, %s, %s, %s, %s, true), %s)"
