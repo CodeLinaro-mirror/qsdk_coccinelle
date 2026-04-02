@@ -494,11 +494,45 @@ let mk_pretty_printers =
     | ConstructDestructField cd ->
       Printf.sprintf "ConstructDestructField(%s)" (pp_construct_destruct cd)
 
+    and pp_base_type = function
+        Void -> "Void"
+      | IntType intType -> Printf.sprintf "IntType(%s)"
+        (match intType with
+          CChar -> "CChar"
+        | Si (sign, base) -> Printf.sprintf "Si(%s * %s)"
+          (match sign with
+            Signed -> "Signed"
+          | UnSigned -> "UnSigned")
+          (match base with CChar2  -> "CChar2"
+          | CShort  -> "CShort"
+          | CInt  -> "CInt"
+          | CLong  -> "CLong"
+          | CLongLong -> "CLongLong"
+          )
+        )
+      | FloatType floatType -> Printf.sprintf "FloatType %s"
+        (match floatType with
+          CFloat   -> "CFloat"
+        | CDouble-> "CDouble"
+        | CLongDouble-> "CLongDouble"
+        | CFloatComplex-> "CFloatComplex"
+        | CDoubleComplex-> "CDoubleComplex"
+        | CLongDoubleComplex-> "CLongDoubleComplex"
+        | CUnknownComplex-> "CUnknownComplex")
+      | SizeType -> "SizeType"
+      | SSizeType -> "SSizeType"
+      | PtrDiffType -> "PtrDiffType"
+
+
+  and pp_type_qualifier = function (* printing only the keywords is more readable than also printing the boolean record *)
+        ({const=const; volatile=volatile; restrict=restrict}, il) -> Printf.sprintf "(_,%s)" (elem_list_to_str il)
+
   and (pp_fullType: fullType -> string) =
     fun (qu, attr, (ty, iity)) ->
 
-      Printf.sprintf "(_, %s, (%s,%s))"
+      Printf.sprintf "(%s, %s, (%s,%s))"
 
+      (pp_type_qualifier qu)
       (pp_attributes attr)
 
       (match ty with
@@ -529,7 +563,7 @@ let mk_pretty_printers =
           Printf.sprintf "EnumDef(%s, %s, %s)"
             (pp_fullType typ) (str_opt pp_fullType base) (str_enumt)
 
-      | (BaseType _) -> Printf.sprintf "BaseType(_)"
+      | (BaseType bt) -> Printf.sprintf "BaseType(%s)" (pp_base_type bt)
       | (StructUnionName (s, structunion)) -> Printf.sprintf "StructUnionName(_, _)"
       | (EnumName  (key, s)) -> Printf.sprintf "EnumName(_, _)"
       | (TypeName (name)) -> Printf.sprintf "TypeName(%s)" (pp_name name)

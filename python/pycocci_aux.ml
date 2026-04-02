@@ -116,7 +116,7 @@ let stringrep_internals = function
 | Ast_c.MetaTypeVal      (_,typ) -> Printf.sprintf "MetaTypeVal(_,%s)" (Internal_print_c.pp_fullType typ)
 | Ast_c.MetaInitVal      (_,ini) -> Printf.sprintf "MetaInitVal(_,%s)" (Internal_print_c.pp_init ini)
 | Ast_c.MetaInitListVal  (newlines,_,ini) -> Printf.sprintf "MetaInitListVal(%s,_,%s)" (Internal_print_c.pplines newlines) (Internal_print_c.pp_init_list ini)
-| Ast_c.MetaDeclVal      (_,decl) -> Printf.sprintf "MetaDeclVal(_,%s)" (Internal_print_c.pp_decl decl)
+| Ast_c.MetaDeclVal      (_decl,decl) -> Printf.sprintf "MetaDeclVal(_,%s)" (Internal_print_c.pp_decl decl) (* the unused declaration is (often?) redundant *)
 | Ast_c.MetaFieldVal      (_,field) -> Printf.sprintf "MetaFieldVal(_,%s)" (Internal_print_c.pp_field field)
 | Ast_c.MetaFieldListVal      (_,field) -> Printf.sprintf "MetaFieldListVal(_,%s)" (Internal_print_c.pp_field_list field)
 | Ast_c.MetaStmtVal      (_,statement,_) -> Printf.sprintf "MetaStmtVal(_,%s,_)"    (Internal_print_c.pp_statement statement)
