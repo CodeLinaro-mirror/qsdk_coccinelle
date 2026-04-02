@@ -241,8 +241,7 @@ let mk_pretty_printers =
   and pp_name = function
 
     | RegularName (s, ii) ->
-        let (i1) = Common.tuple_of_list1 ii in
-        Printf.sprintf "RegularName(%s,%s)" s (pr_elem i1)
+        Printf.sprintf "RegularName(%s,_)" s (* we only show the string, as ii contains the same information *)
 
     | Operator(space_needed,op::ii) ->
       Printf.sprintf "Operator(%B,%s)" (space_needed) (elem_list_to_str ([op] @ ii))
