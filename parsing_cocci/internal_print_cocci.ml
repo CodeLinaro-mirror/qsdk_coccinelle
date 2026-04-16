@@ -25,8 +25,6 @@ let quoted_string s = "\"" ^ s ^ "\""
 
 (* --------------------------------------------------------------------- *)
 
-(* todo limit length of mut. rec. function chain *)
-
 (* avoid polyvariance problems *)
 let anything : (Ast.anything -> string) ref = ref (function _ -> "")
 
@@ -82,12 +80,10 @@ let mcode to_str = function
       (*(str_info info)*)
       (*(print_pos pos)*)
 
+(* --------------------------------------------------------------------- *)
+(* Dots *)
+
 let dots to_str d = str_list to_str (Ast.unwrap d)
-
-(* --------------------------------------------------------------------- *)
-(* Disjunctions *)
-
-(* --------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------------------- *)
 (* Identifier *)
@@ -102,6 +98,9 @@ let rec ident i =
   | Ast.DisjId(id_list) -> Printf.sprintf "DisjId(%s)" (str_list ident id_list)
   | Ast.ConjId(id_list) -> Printf.sprintf "ConjId(%s)" (str_list ident id_list)
   | Ast.OptIdent(id) -> Printf.sprintf "OptIdent(%s)" (ident id)
+
+(* --------------------------------------------------------------------- *)
+(* Expression *)
 
 let rec expression e =
   match Ast.unwrap e with
@@ -274,7 +273,6 @@ let rec expression e =
   | Ast.Edots(dots,None) -> Printf.sprintf "Edots(%s,None)" (mcode quoted_string dots)
   | Ast.OptExp(exp) -> Printf.sprintf "OptExp(%s)" (expression exp)
 
-(* todo - copy over useful category/separator comments such as "Variable declaration" *)
 (* todo flag switch *)
 
 and print_args (lp,args,rp) =
@@ -287,6 +285,10 @@ and string_fragment e =
   match Ast.unwrap e with
     Ast.ConstantFragment(str) -> Printf.sprintf "ConstantFragment(%s)" (mcode quoted_string str)
   | Ast.FormatFragment(pct,fmt) ->
+    let string_format e =
+      match Ast.unwrap e with
+        Ast.ConstantFormat(str) -> Printf.sprintf "ConstantFormat(%s)" (mcode quoted_string str)
+      | Ast.MetaFormat(name,_,_,_) -> Printf.sprintf "MetaFormat(%s,_,_,_)" (mcode print_meta name) in
       Printf.sprintf "FormatFragment(%s,%s)"
         (mcode quoted_string pct)
         (string_format fmt)
@@ -295,11 +297,6 @@ and string_fragment e =
       Printf.sprintf "MetaFormatList(%s,%s,_,_,_,_)"
         (mcode quoted_string pct)
         (mcode print_meta name)
-
-and string_format e =
-  match Ast.unwrap e with
-    Ast.ConstantFormat(str) -> Printf.sprintf "ConstantFormat(%s)" (mcode quoted_string str)
-  | Ast.MetaFormat(name,_,_,_) -> Printf.sprintf "MetaFormat(%s,_,_,_)" (mcode print_meta name)
 
 and unaryOp2c = function
     Ast.GetRef -> "GetRef"
@@ -391,13 +388,6 @@ and fullType ft =
 and print_types = function
     None -> "None"
   | Some l -> str_list fullType l
-
-and varargs = function
-  | None -> "None"
-  | Some (comma, ellipsis) ->
-      Printf.sprintf "Some(%s,%s)"
-        (mcode quoted_string comma)
-        (mcode quoted_string ellipsis)
 
 and print_fninfo = function
     Ast.FStorage(stg) -> Printf.sprintf "FStorage(%s)" (mcode storage stg)
@@ -572,7 +562,18 @@ and const_vol = function
     Ast.Const -> "Const"
   | Ast.Volatile -> "Volatile"
 
+(* --------------------------------------------------------------------- *)
+(* Variable declaration *)
+(* Even if the Cocci program specifies a list of declarations, they are
+   split out into multiple declarations of a single variable each. *)
+
 and declaration d =
+  let alignas (Ast.Align(align,lpar,expr,rpar)) =
+  Printf.sprintf "Align(%s,%s,%s,%s)"
+    (mcode quoted_string align)
+    (mcode quoted_string lpar)
+    (expression expr)
+    (mcode quoted_string rpar) in
   match Ast.unwrap d with
     Ast.MetaDecl(name,_,_,_) ->
       Printf.sprintf "MetaDecl(%s,_,_,_)" (mcode print_meta name)
@@ -599,6 +600,12 @@ and declaration d =
         (print_attribute_list endattr)
         (mcode quoted_string sem)
   | Ast.FunProto (fninfo,name,lp1,params,va,rp1,sem) ->
+      let varargs = function
+      | None -> "None"
+      | Some (comma, ellipsis) ->
+        Printf.sprintf "Some(%s,%s)"
+          (mcode quoted_string comma)
+          (mcode quoted_string ellipsis) in
       Printf.sprintf "FunProto (%s,%s,%s,%s,%s,%s,%s)"
         (str_list print_fninfo fninfo)
         (ident name)
@@ -642,13 +649,6 @@ and declaration d =
   | Ast.DisjDecl(decls) -> Printf.sprintf "isjDecl(%s)" (str_list declaration decls)
   | Ast.ConjDecl(decls) -> Printf.sprintf "ConjDecl(%s)" (str_list declaration decls)
   | Ast.OptDecl(decl) -> Printf.sprintf "OptDecl(%s)" (declaration decl)
-
-and alignas (Ast.Align(align,lpar,expr,rpar)) =
-  Printf.sprintf "Align(%s,%s,%s,%s)"
-    (mcode quoted_string align)
-    (mcode quoted_string lpar)
-    (expression expr)
-    (mcode quoted_string rpar)
 
 and annotated_decl d =
   match Ast.unwrap d with
@@ -750,6 +750,23 @@ and initialiser i =
       (mcode quoted_string rb)
       (str_list initialiser whencode)
   | Ast.InitGccExt(designators,eq,ini) ->
+    let designator = function
+      Ast.DesignatorField(dot,id) ->
+        Printf.sprintf "DesignatorField(%s,%s)"
+          (mcode quoted_string dot)
+          (ident id)
+    | Ast.DesignatorIndex(lb,exp,rb) ->
+        Printf.sprintf "DesignatorIndex(%s,%s,%s)"
+          (mcode quoted_string lb)
+          (expression exp)
+          (mcode quoted_string rb)
+    | Ast.DesignatorRange(lb,min,dots,max,rb) ->
+        Printf.sprintf "DesignatorRange(%s,%s,%s,%s,%s)"
+          (mcode quoted_string lb)
+          (expression min)
+          (mcode quoted_string dots)
+          (expression max)
+          (mcode quoted_string rb) in
       Printf.sprintf "InitGccExt(%s,%s,%s)"
         (str_list designator designators)
         (mcode quoted_string eq)
@@ -766,24 +783,6 @@ and initialiser i =
         (initialiser whencode)
   | Ast.Idots(dots,None) -> Printf.sprintf "Idots(%s,None)" (mcode quoted_string dots)
   | Ast.OptIni(ini) -> Printf.sprintf "OptIni(%s)" (initialiser ini)
-
-and designator = function
-    Ast.DesignatorField(dot,id) ->
-      Printf.sprintf "DesignatorField(%s,%s)"
-        (mcode quoted_string dot)
-        (ident id)
-  | Ast.DesignatorIndex(lb,exp,rb) ->
-      Printf.sprintf "DesignatorIndex(%s,%s,%s)"
-        (mcode quoted_string lb)
-        (expression exp)
-        (mcode quoted_string rb)
-  | Ast.DesignatorRange(lb,min,dots,max,rb) ->
-      Printf.sprintf "DesignatorRange(%s,%s,%s,%s,%s)"
-        (mcode quoted_string lb)
-        (expression min)
-        (mcode quoted_string dots)
-        (expression max)
-        (mcode quoted_string rb)
 
 (* --------------------------------------------------------------------- *)
 (* Parameter *)
@@ -826,8 +825,6 @@ and templateParameterTypeDef p =
 
 and parameter_list l = dots parameterTypeDef l
 
-and template_parameter_list l = dots templateParameterTypeDef l
-
 (* --------------------------------------------------------------------- *)
 (* Top-level code *)
 
@@ -849,6 +846,7 @@ and rule_elem re =
         (mcode quoted_string rp)
         (print_attribute_list attrs)
   | Ast.TemplateDefinitionHeader(tmpkw,lab,params,rab) ->
+      let template_parameter_list l = dots templateParameterTypeDef l in
       Printf.sprintf "TemplateDefinitionHeader(%s,%s,%s,%s)"
         (mcode quoted_string tmpkw)
         (mcode quoted_string lab)
@@ -942,6 +940,11 @@ and rule_elem re =
         (expression exp)
         (mcode quoted_string sem)
   | Ast.Exec(exec,lang,code,sem) ->
+      let exec_code e =
+        match Ast.unwrap e with
+          Ast.ExecEval(colon,id) -> Printf.sprintf "ExecEval(%s,%s)" (mcode quoted_string colon) (expression id)
+        | Ast.ExecToken(tok) -> Printf.sprintf "ExecToken(%s)" (mcode quoted_string tok)
+        | Ast.ExecDots(dots) -> Printf.sprintf "ExecDots(%s)" (mcode quoted_string dots) in
       Printf.sprintf "Exec(%s,%s,%s,%s)"
         (mcode quoted_string exec)
         (mcode quoted_string lang)
@@ -1007,12 +1010,6 @@ and forinfo = function
       Printf.sprintf "ForRange(%s, %s)"
         (annotated_decl ann_decl)
         (initialiser ini)
-
-and pragmainfo pi =
-  match Ast.unwrap pi with
-    Ast.PragmaString(s) -> Printf.sprintf "PragmaString(%s)" (mcode quoted_string s)
-  | Ast.PragmaDots (dots) -> Printf.sprintf "PragmaDots (%s)" (mcode quoted_string dots)
-  | Ast.MetaPragmaInfo(metavar,_,_,_) -> Printf.sprintf "MetaPragmaInfo(%s,_,_,_)" (mcode print_meta metavar)
 
 and print_define_parameters params =
   match Ast.unwrap params with
@@ -1145,6 +1142,11 @@ and directive di =
         (mcode quoted_string inc)
         (expression s)
   | Ast.Pragma(prg,id,body) ->
+      let pragmainfo pi =
+        match Ast.unwrap pi with
+          Ast.PragmaString(s) -> Printf.sprintf "PragmaString(%s)" (mcode quoted_string s)
+        | Ast.PragmaDots (dots) -> Printf.sprintf "PragmaDots (%s)" (mcode quoted_string dots)
+        | Ast.MetaPragmaInfo(metavar,_,_,_) -> Printf.sprintf "MetaPragmaInfo(%s,_,_,_)" (mcode print_meta metavar) in
       Printf.sprintf "Pragma(%s,%s,%s)" 
         (mcode quoted_string prg)
         (ident id) 
@@ -1172,15 +1174,17 @@ and directive di =
 and whencode notfn alwaysfn = function
     Ast.WhenNot a -> Printf.sprintf "WhenNot(%s)" (notfn a)
   | Ast.WhenAlways a -> Printf.sprintf "WhenAlways(%s)" (alwaysfn a)
-  | Ast.WhenModifier x -> Printf.sprintf "WhenModifier(%s)" (print_when_modif x)
+  | Ast.WhenModifier x ->
+      let print_when_modif = function
+      | Ast.WhenAny    -> "WhenAny"
+      | Ast.WhenStrict -> "WhenStrict"
+      | Ast.WhenForall -> "WhenForall"
+      | Ast.WhenExists -> "WhenExists" in
+      Printf.sprintf "WhenModifier(%s)" (print_when_modif x)
   | Ast.WhenNotTrue a -> Printf.sprintf "WhenNotTrue(%s)" (rule_elem a)
   | Ast.WhenNotFalse a -> Printf.sprintf "WhenNotFalse(%s)" (rule_elem a)
 
-and print_when_modif = function
-  | Ast.WhenAny    -> "WhenAny"
-  | Ast.WhenStrict -> "WhenStrict"
-  | Ast.WhenForall -> "WhenForall"
-  | Ast.WhenExists -> "WhenExists"
+
 
 and case_line c =
   match Ast.unwrap c with
@@ -1191,23 +1195,17 @@ and case_line c =
   | Ast.OptCase(case) ->
       Printf.sprintf "OptCase(%s)" (case_line case)
 
-and exec_code e =
-  match Ast.unwrap e with
-    Ast.ExecEval(colon,id) -> Printf.sprintf "ExecEval(%s,%s)" (mcode quoted_string colon) (expression id)
-  | Ast.ExecToken(tok) -> Printf.sprintf "ExecToken(%s)" (mcode quoted_string tok)
-  | Ast.ExecDots(dots) -> Printf.sprintf "ExecDots(%s)" (mcode quoted_string dots)
-
 (* --------------------------------------------------------------------- *)
 (* CPP code *)
 
-and inc_file  = function
+and inc_file inc_f  =
+  let inc_elem  = function
+    Ast.IncPath s -> Printf.sprintf "IncPath(%s)" s
+  | Ast.IncDots -> "IncDots" in
+  match inc_f with
     Ast.Local(elems) -> Printf.sprintf "Local(%s)" (str_list inc_elem elems)
   | Ast.NonLocal(elems) -> Printf.sprintf "NonLocal(%s)" (str_list inc_elem elems)
   | Ast.AnyInc -> "AnyInc"
-
-and inc_elem  = function
-    Ast.IncPath s -> Printf.sprintf "IncPath(%s)" s
-  | Ast.IncDots -> "IncDots"
 
 let print_listlen = function
     Ast.MetaLen((r,n),_) -> Printf.sprintf "MetaLen((%s,%s),_)" r n
