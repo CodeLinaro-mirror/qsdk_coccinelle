@@ -33,7 +33,7 @@ SOURCES_ctl := \
 	flag_ctl.ml ast_ctl.ml pretty_print_ctl.ml ctl_engine.ml wrapper_ctl.ml
 SOURCES_parsing_cocci := \
 	flag_parsing_cocci.ml ast_cocci.ml ast0_cocci.ml \
-	pretty_print_cocci.ml visitor_ast0_types.ml \
+	pretty_print_cocci.ml internal_print_cocci.ml visitor_ast0_types.ml \
 	visitor_ast.ml visitor_ast0.ml strip_ast.ml ast0toast.ml unparse_ast0.ml \
 	unify_ast.ml compute_lines.ml iso_pattern.ml comm_assoc.ml \
 	iso_compile.ml single_statement.ml simple_assignments.ml \

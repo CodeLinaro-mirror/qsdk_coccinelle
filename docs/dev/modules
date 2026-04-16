@@ -104,7 +104,6 @@ parsing_c/parsing_c.cma:
   lib_parsing_c.cmo
   control_flow_c_build.cmo
   pretty_print_c.cmo
-  internal_print_c.cmo
   semantic_c.cmo
   lexer_parser.cmo
   parser_c.cmo

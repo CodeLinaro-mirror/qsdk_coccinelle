@@ -1177,7 +1177,7 @@ let print_listlen rule = function
       print_string "] "
   | Ast.AnyLen -> print_string " "
 
-(* why does this not use typeC? *)
+(* why does this not use typeC/fullType? *)
 let print_types = function
     None -> ()
   | Some [ty] -> print_string (Ast.string_of_fullType ty); print_string " "

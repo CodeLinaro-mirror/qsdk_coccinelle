@@ -643,7 +643,7 @@ let test_parse_cocci file =
 
   let (mvs,xs,_,_,_,_,_,query,_,_) =
     Parse_cocci.process file (Some !Cocciconfig.std_iso) false in
-  xs +> List.iter2 Pretty_print_cocci.unparse mvs;
+  xs +> (List.iter2 Internal_print_cocci.unparse mvs);
   Format.print_newline();
   (* compile ocaml script code *)
   (match Prepare_ocamlcocci.prepare file xs with
