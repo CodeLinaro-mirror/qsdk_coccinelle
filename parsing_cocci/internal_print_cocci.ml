@@ -273,8 +273,6 @@ let rec expression e =
   | Ast.Edots(dots,None) -> Printf.sprintf "Edots(%s,None)" (mcode quoted_string dots)
   | Ast.OptExp(exp) -> Printf.sprintf "OptExp(%s)" (expression exp)
 
-(* todo flag switch *)
-
 and print_args (lp,args,rp) =
   Printf.sprintf "(%s,%s,%s)"
     (mcode quoted_string lp)

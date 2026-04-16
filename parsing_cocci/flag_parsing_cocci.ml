@@ -29,3 +29,5 @@ let debug_parse_cocci = ref false
 
 (* When using the parser to generate hardened semantic patches *)
 let generating_mode = ref false
+
+let cocci_internals = ref false

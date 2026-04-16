@@ -566,7 +566,7 @@ let other_options = [
 (*  "--debug_cfg",          Arg.Set Flag_parsing_c.debug_cfg , "  "; *)
     "--debug-unparsing",    Arg.Set Flag_parsing_c.debug_unparsing, "  ";
     "--debug-parse-cocci",  Arg.Set Flag_parsing_cocci.debug_parse_cocci, "  ";
-
+    "--cocci-internals",    Arg.Set Flag_parsing_cocci.cocci_internals, "  have the cocci pretty printer reveal Coccinelle's internal types";
     "--print-internals",         Arg.Set Flag_parsing_c.print_internals, "  have the C pretty printer reveal Coccinelle's internal types";
 
   ];

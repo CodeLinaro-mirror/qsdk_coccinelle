@@ -9,3 +9,4 @@ val id_utils_index : string ref
 val in_minus : bool ref
 val debug_parse_cocci : bool ref
 val generating_mode : bool ref
+val cocci_internals : bool ref
