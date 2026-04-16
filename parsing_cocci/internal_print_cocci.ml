@@ -1222,41 +1222,41 @@ let print_seed = function
 
 let unparse_cocci_mv  = function
     Ast.MetaMetaDecl _ -> failwith "should be removed"
-  | Ast.MetaIdDecl(_,(r,n)) -> Printf.sprintf "MetaIdDecl(_,(%s,%s))" r n
-  | Ast.MetaFreshIdDecl((r,n),seed) -> Printf.sprintf "MetaFreshIdDecl((%s,%s),%s)" r n (print_seed seed) 
-  | Ast.MetaTypeDecl(_,(r,n)) -> Printf.sprintf "MetaTypeDecl(_,(%s,%s))" r n 
-  | Ast.MetaInitDecl(_,(r,n)) -> Printf.sprintf "MetaInitDecl(_,(%s,%s))" r n 
-  | Ast.MetaInitListDecl(_,(r,n),len) -> Printf.sprintf "MetaInitListDecl(_,(%s,%s),%s)" r n (print_listlen len) 
+  | Ast.MetaIdDecl(_,(r,n)) -> Printf.sprintf "MetaIdDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaFreshIdDecl((r,n),seed) -> Printf.sprintf "MetaFreshIdDecl((%s,%s),%s)" (quoted_string r) (quoted_string n) (print_seed seed) 
+  | Ast.MetaTypeDecl(_,(r,n)) -> Printf.sprintf "MetaTypeDecl(_,(%s,%s))" (quoted_string r) (quoted_string n) 
+  | Ast.MetaInitDecl(_,(r,n)) -> Printf.sprintf "MetaInitDecl(_,(%s,%s))" (quoted_string r) (quoted_string n) 
+  | Ast.MetaInitListDecl(_,(r,n),len) -> Printf.sprintf "MetaInitListDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_listlen len) 
   | Ast.MetaListlenDecl(r,n) -> Printf.sprintf "MetaListlenDecl(_,_)"
-  | Ast.MetaParamDecl(_,(r,n)) -> Printf.sprintf "MetaParamDecl(_,(%s,%s))" r n 
-  | Ast.MetaBinaryOperatorDecl(_,(r,n)) -> Printf.sprintf "MetaBinaryOperatorDecl(_,(%s,%s))" r n 
-  | Ast.MetaAssignmentOperatorDecl(_,(r,n)) -> Printf.sprintf "MetaAssignmentOperatorDecl(_,(%s,%s))" r n
-  | Ast.MetaPragmaInfoDecl(_,(r,n)) -> Printf.sprintf "MetaPragmaInfoDecl(_,(%s,%s))" r n
-  | Ast.MetaParamListDecl(_,(r,n),len) -> Printf.sprintf "MetaParamListDecl(_,(%s,%s),%s)" r n (print_listlen len)
-  | Ast.MetaConstDecl(_,(r,n),ty) -> Printf.sprintf "MetaConstDecl(_,(%s,%s),%s)" r n (print_types ty)
-  | Ast.MetaErrDecl(_,(r,n)) -> Printf.sprintf "MetaErrDecl(_,(%s,%s))" r n
-  | Ast.MetaExpDecl(_,(r,n),None,_bitfield) -> Printf.sprintf "MetaExpDecl(_,(%s,%s),None,_)" r n
-  | Ast.MetaExpDecl(_,(r,n),ty,_bitfield) -> Printf.sprintf "MetaExpDecl(_,(%s,%s),%s,_)" r n (print_types ty)
-  | Ast.MetaIdExpDecl(_,(r,n),ty) -> Printf.sprintf "MetaIdExpDecl(_,(%s,%s),%s)" r n (print_types ty)
-  | Ast.MetaLocalIdExpDecl(_,(r,n),ty) -> Printf.sprintf "MetaLocalIdExpDecl(_,(%s,%s),%s)" r n (print_types ty)
-  | Ast.MetaGlobalIdExpDecl(_,(r,n),ty) -> Printf.sprintf "MetaGlobalIdExpDecl(_,(%s,%s),%s)" r n (print_types ty)
-  | Ast.MetaExpListDecl(_,(r,n),len) -> Printf.sprintf "MetaExpListDecl(_,(%s,%s),%s)" r n (print_listlen len)
-  | Ast.MetaDeclDecl(_,(r,n)) -> Printf.sprintf "MetaDeclDecl(_,(%s,%s))" r n
-  | Ast.MetaFieldDecl(_,(r,n)) -> Printf.sprintf "MetaFieldDecl(_,(%s,%s))" r n
-  | Ast.MetaFieldListDecl(_,(r,n),len) -> Printf.sprintf "MetaFieldListDecl(_,(%s,%s),%s)" r n (print_listlen len)
-  | Ast.MetaStmDecl(_,(r,n)) -> Printf.sprintf "MetaStmDecl(_,(%s,%s))" r n
-  | Ast.MetaStmListDecl(_,(r,n),len) -> Printf.sprintf "MetaStmListDecl(_,(%s,%s),%s)" r n (print_listlen len)
-  | Ast.MetaDParamListDecl(_,(r,n),len) -> Printf.sprintf "MetaDParamListDecl(_,(%s,%s),%s)" r n (print_listlen len)
-  | Ast.MetaFuncDecl(_,(r,n)) -> Printf.sprintf "MetaFuncDecl(_,(%s,%s))" r n
-  | Ast.MetaLocalFuncDecl(_,(r,n)) -> Printf.sprintf "MetaLocalFuncDecl(_,(%s,%s))" r n
-  | Ast.MetaPosDecl(_,(r,n)) -> Printf.sprintf "MetaPosDecl(_,(%s,%s))" r n
-  | Ast.MetaComDecl(_,(r,n)) -> Printf.sprintf "MetaComDecl(_,(%s,%s))" r n
-  | Ast.MetaFmtDecl(_,(r,n)) -> Printf.sprintf "MetaFmtDecl(_,(%s,%s))" r n
-  | Ast.MetaAttributeDecl(_,(r,n)) -> Printf.sprintf "MetaAttributeDecl(_,(%s,%s))" r n
-  | Ast.MetaFragListDecl(_,(r,n),len) -> Printf.sprintf "MetaFragListDecl(_,(%s,%s),%s)" r n (print_listlen len)
+  | Ast.MetaParamDecl(_,(r,n)) -> Printf.sprintf "MetaParamDecl(_,(%s,%s))" (quoted_string r) (quoted_string n) 
+  | Ast.MetaBinaryOperatorDecl(_,(r,n)) -> Printf.sprintf "MetaBinaryOperatorDecl(_,(%s,%s))" (quoted_string r) (quoted_string n) 
+  | Ast.MetaAssignmentOperatorDecl(_,(r,n)) -> Printf.sprintf "MetaAssignmentOperatorDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaPragmaInfoDecl(_,(r,n)) -> Printf.sprintf "MetaPragmaInfoDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaParamListDecl(_,(r,n),len) -> Printf.sprintf "MetaParamListDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_listlen len)
+  | Ast.MetaConstDecl(_,(r,n),ty) -> Printf.sprintf "MetaConstDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_types ty)
+  | Ast.MetaErrDecl(_,(r,n)) -> Printf.sprintf "MetaErrDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaExpDecl(_,(r,n),None,_bitfield) -> Printf.sprintf "MetaExpDecl(_,(%s,%s),None,_)" (quoted_string r) (quoted_string n)
+  | Ast.MetaExpDecl(_,(r,n),ty,_bitfield) -> Printf.sprintf "MetaExpDecl(_,(%s,%s),%s,_)" (quoted_string r) (quoted_string n) (print_types ty)
+  | Ast.MetaIdExpDecl(_,(r,n),ty) -> Printf.sprintf "MetaIdExpDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_types ty)
+  | Ast.MetaLocalIdExpDecl(_,(r,n),ty) -> Printf.sprintf "MetaLocalIdExpDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_types ty)
+  | Ast.MetaGlobalIdExpDecl(_,(r,n),ty) -> Printf.sprintf "MetaGlobalIdExpDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_types ty)
+  | Ast.MetaExpListDecl(_,(r,n),len) -> Printf.sprintf "MetaExpListDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_listlen len)
+  | Ast.MetaDeclDecl(_,(r,n)) -> Printf.sprintf "MetaDeclDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaFieldDecl(_,(r,n)) -> Printf.sprintf "MetaFieldDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaFieldListDecl(_,(r,n),len) -> Printf.sprintf "MetaFieldListDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_listlen len)
+  | Ast.MetaStmDecl(_,(r,n)) -> Printf.sprintf "MetaStmDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaStmListDecl(_,(r,n),len) -> Printf.sprintf "MetaStmListDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_listlen len)
+  | Ast.MetaDParamListDecl(_,(r,n),len) -> Printf.sprintf "MetaDParamListDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_listlen len)
+  | Ast.MetaFuncDecl(_,(r,n)) -> Printf.sprintf "MetaFuncDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaLocalFuncDecl(_,(r,n)) -> Printf.sprintf "MetaLocalFuncDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaPosDecl(_,(r,n)) -> Printf.sprintf "MetaPosDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaComDecl(_,(r,n)) -> Printf.sprintf "MetaComDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaFmtDecl(_,(r,n)) -> Printf.sprintf "MetaFmtDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaAttributeDecl(_,(r,n)) -> Printf.sprintf "MetaAttributeDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaFragListDecl(_,(r,n),len) -> Printf.sprintf "MetaFragListDecl(_,(%s,%s),%s)" (quoted_string r) (quoted_string n) (print_listlen len)
   | Ast.MetaAnalysisDecl(analyzer,(r,n)) -> failwith "analyzer not supported"
-  | Ast.MetaDeclarerDecl(_,(r,n)) -> Printf.sprintf "MetaDeclarerDecl(_,(%s,%s))" r n
-  | Ast.MetaIteratorDecl(_,(r,n)) -> Printf.sprintf "MetaIteratorDecl(_,(%s,%s))" r n
+  | Ast.MetaDeclarerDecl(_,(r,n)) -> Printf.sprintf "MetaDeclarerDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
+  | Ast.MetaIteratorDecl(_,(r,n)) -> Printf.sprintf "MetaIteratorDecl(_,(%s,%s))" (quoted_string r) (quoted_string n)
   | Ast.MetaScriptDecl _ -> failwith "not a cocci decl"
 
 (* --------------------------------------------------------------------- *)
