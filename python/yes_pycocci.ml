@@ -395,7 +395,7 @@ let construct_variables mv e =
        let _ =
 	 build_variable py
 	   (Py.String.of_string
-        (if !Flag_parsing_c.print_internals then
+        (if !Flag_parsing_c.c_internals then
           (Pycocci_aux.stringrep_internals binding)
         else
           (Pycocci_aux.stringrep binding)

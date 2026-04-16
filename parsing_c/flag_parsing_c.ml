@@ -231,4 +231,4 @@ let parsing_header_for_types = ref false
 
 let force_kr = ref false
 let prevent_kr = ref false
-let print_internals = ref false
+let c_internals = ref false
