@@ -374,6 +374,10 @@ is none, the constant is assumed to be a signed integer.  If there is only
   patch/match run faster, at the cost of not finding matches that wrap
   around loops.}
 
+\rare{-{}-no-gotos}{Cause gotos to simply fall through to the next
+  line. This may make a semantic patch/match run faster, but in general does
+  not respect the semantics of the source code.}
+
 \developer{-{}-use-cache}{Use preparsed versions of the C files that are
 stored in a cache.}
 
