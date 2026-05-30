@@ -653,7 +653,8 @@ and attribute old_metas table minus x =
   match Ast0.unwrap x with
     Ast0.Attribute(arg) ->
       attr_arg old_metas table minus arg
-  | Ast0.GccAttribute _ -> ()
+  | Ast0.GccAttribute(attr_,lp1,lp2,args,rp1,rp2) ->
+      dots (expression ID old_metas table minus) args
   | Ast0.CxxAttribute _ -> ()
   | Ast0.CxxAttributeUsing (lb1,usng,atnm,dotdot,args,rb1,rb2) ->
       ident GLOBAL old_metas table minus atnm
