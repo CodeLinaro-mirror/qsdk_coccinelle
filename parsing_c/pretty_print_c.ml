@@ -382,7 +382,7 @@ and pp_string_format (e,ii) =
             pr_elem i6; (* #endif *)
             indent_if_needed st3 (function _ -> pp_statement st3);
             pr_elem iifakend
-	| _ -> raise (Impossible 90))
+	| _ -> raise (Impossible 172))
     | Selection (TryCatch (st, cal)), [it;iifakend] ->
         pr_elem it;
         pp_statement st;
@@ -700,7 +700,7 @@ and pp_string_format (e,ii) =
 		  do_option pr_elem optfinal; pr_elem lb;
               | None, [su;lb;rb] ->
 		  pr_elem su; pr_space(); do_option pr_elem optfinal; pr_elem lb;
-              | x -> raise (Impossible 101));
+              | x -> raise (Impossible 167));
 
               fields +> List.iter (fun x -> pr_nl(); pr_indent(); pp_field x);
 	      pr_nl();
@@ -840,7 +840,7 @@ and pp_string_format (e,ii) =
 	    pr_space(); pr_elem iini; pr_space(); pp_init init
 	| Ast_c.ValInit(init,[]) -> pr_space(); pp_init init
 	| Ast_c.ValInit _ -> raise (Impossible 113))
-    | None -> raise (Impossible 113)
+    | None -> raise (Impossible 168)
   and pp_field = function
       DeclarationField
 	(FieldDeclList(onefield_multivars,iiptvirg::ifakestart::iisto)) ->

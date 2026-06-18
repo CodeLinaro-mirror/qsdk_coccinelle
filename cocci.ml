@@ -759,7 +759,7 @@ let rec update_include_rel_pos cs =
       match c with
       | Ast_c.Local x -> (x, refs)
       | Ast_c.NonLocal x -> (x, refs)
-      | Ast_c.Weird x -> raise (Impossible 161)
+      | Ast_c.Weird x -> raise (Impossible 173)
     ) in
 
   update_rel_pos_bis fst locals;

@@ -1497,7 +1497,7 @@ let rec get_s_and_ii_of_name name =
       | (nm,noiiop)::xs -> get_s_and_ii_of_name nm)
   | CppConcatenatedName xs ->
       (match xs with
-      | [] -> raise (Impossible 60)
+      | [] -> raise (Impossible 170)
       | ((s,iis),noiiop)::xs ->
           s, iis
       )

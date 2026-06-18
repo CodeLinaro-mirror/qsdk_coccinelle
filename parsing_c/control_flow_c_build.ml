@@ -954,7 +954,7 @@ let rec aux_statement : (nodei option * xinfo) -> statement -> nodei list -> nod
 	match context_info with
 	  LoopInfo (loopstarti, loopendi, braces, parent_lbl) -> false
 	| SwitchInfo (startbrace, loopendi, braces, parent_lbl) -> true
-	| NoInfo -> raise (Impossible 65) in
+	| NoInfo -> raise (Impossible 171) in
 
       (* flow_to_ast: *)
       let (node_info, string) =
