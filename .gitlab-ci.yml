@@ -72,14 +72,6 @@ prepare Debian + OCaml 5.3.0:
     distribution: debian
     ocaml_version: 5.3.0
 
-prepare openSUSE + OCaml 4.11.0:
-  <<: *prepare_docker_image_def
-  stage: prepare distribution images
-  variables:
-    image_name: opensuse-leap-4.11.0
-    distribution: opensuse-leap
-    ocaml_version: 4.11.0
-
 prepare openSUSE + OCaml 5.3.0:
   <<: *prepare_docker_image_def
   stage: prepare distribution images
@@ -154,11 +146,6 @@ build Debian + OCaml 5.3.0:
   variables:
     from: debian-5.3.0
 
-build openSUSE + OCaml 4.11.0:
-  <<: *build_coccinelle_def
-  variables:
-    from: opensuse-leap-4.11.0
-
 build openSUSE + OCaml 5.3.0:
   <<: *build_coccinelle_def
   variables:
@@ -215,11 +202,6 @@ test Debian + OCaml 5.3.0:
   <<: *test_coccinelle_def
   variables:
     from: debian-5.3.0
-
-test openSUSE + OCaml 4.11.0:
-  <<: *test_coccinelle_def
-  variables:
-    from: opensuse-leap-4.11.0
 
 test openSUSE + OCaml 5.3.0:
   <<: *test_coccinelle_def
