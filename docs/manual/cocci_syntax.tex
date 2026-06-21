@@ -799,6 +799,11 @@ foo()
 
 Note that the region matched by ``...'' can be empty.
 
+Dots in an if branch that ends with a return are allowed to flow over any
+goto encountered in the if branch.  Intuitively, if branches that end in
+return are handling errors, and the error handling code may appear
+immediately or at the end of the function.
+
 \subsection{Dot variants}
 There are two possible modifiers to the control flow for ellipses, one
 (<... ...>) indicates that matching the pattern in between the ellipses is
