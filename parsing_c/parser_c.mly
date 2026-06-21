@@ -572,6 +572,7 @@ let args_to_params l pb =
 %token <(string * string (*n*) * string (*p*)) * Ast_c.info> TDecimal
 
 %token <string * Ast_c.info> TIdent
+%token <string * Ast_c.info> TCompl
 %token <string * Ast_c.info> TKRParam
 %token <string * Ast_c.info> Tconstructorname /* parsing_hack for C++ */
 /*(* appears mostly after some fix_xxx in parsing_hack *)*/
@@ -837,6 +838,7 @@ translation_unit:
    *)*/
 ident:
  | TIdent       { $1 }
+ | TCompl       { $1 }
  | TypedefIdent { $1 }
 
 
@@ -974,6 +976,9 @@ cond_expr:
      { $1 }
  | arith_expr TWhy gcc_opt_expr TDotDot cond_expr
      { mk_e (CondExpr ($1,$3,$5)) [$2;$4] }
+ | TCompl
+     { let id = (RegularName (mk_string_wrap $1)) in
+       mk_e(Ident id) [] }
  | Tnew cpp_type
      cpp_initialiser_opt
      {
@@ -1085,6 +1090,7 @@ unary_op:
  | TPlus  { UnPlus,     $1 }
  | TMinus { UnMinus,    $1 }
  | TTilde { Tilde,      $1 }
+ | TCompl { Tilde,      snd $1 }
  | TBang  { Not,        $1 }
  /*(* gccext: have that a lot in old kernel to get address of local label.
     * cf gcc manual "local labels as values".

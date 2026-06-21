@@ -706,6 +706,7 @@ module Parser_c :
       | TSubString of (string * Ast_c.info)
       | TDecimal of ((string * string * string) * Ast_c.info)
       | TIdent of (string * Ast_c.info)
+      | TCompl of (string * Ast_c.info)
       | TKRParam of (string * Ast_c.info)
       | Tconstructorname of (string * Ast_c.info)
       | TypedefIdent of (string * Ast_c.info)

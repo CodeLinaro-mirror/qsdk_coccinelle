@@ -865,7 +865,8 @@ rule token = parse
   | ":"    { TDotDot(tokinfo lexbuf) }
   | "::"   { TColonColon(tokinfo lexbuf) }
   | "!" | "not" { TBang(tokinfo lexbuf) }
-  | "~" | "compl" { TTilde(tokinfo lexbuf) }
+  | "~"    { TTilde(tokinfo lexbuf) }
+  | "compl" { TCompl(tok lexbuf, tokinfo lexbuf) }
 
   | "<:" { TOCro(tokinfo lexbuf) }
   | "<:<:" { TOCroCro(tokinfo lexbuf) }
