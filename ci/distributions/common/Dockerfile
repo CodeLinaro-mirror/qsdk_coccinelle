@@ -3,7 +3,7 @@ FROM $from
 RUN echo ci      ALL=\(ALL\) NOPASSWD:ALL >/etc/sudoers
 USER ci
 RUN curl >~/opam --location \
-  https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux
+  https://github.com/ocaml/opam/releases/download/2.5.0/opam-2.5.0-x86_64-linux
 RUN chmod +x ~/opam
 RUN sudo mv ~/opam /usr/local/bin/opam
 RUN opam init --disable-sandboxing --auto-setup --dot-profile=/home/ci/.bash_env
