@@ -17,6 +17,10 @@
 // File taken from Linux kernel
 // .res does not matter, we just check for errors such as:
 // EXN: Failure("empty list, max_min_ii_by_pos")
+// One rule was added to ensure execution in cocci_vs_c
+// Otherwise simply avoiding the problem in the parser by pushing it to
+// cocci_vs_c would be possible. It would not help detect regression of
+// the type this test was added for.
 
 virtual patch
 virtual context
@@ -93,6 +97,13 @@ expression E,E1;
  E = f(...)
  ... when != E = E1
  !E
+
+@ rule1 @
+identifier initfunc;
+declarer name module_init;
+@@
+
+module_init(initfunc);
 
 @script:ocaml depends on s@
 f << s.f;
