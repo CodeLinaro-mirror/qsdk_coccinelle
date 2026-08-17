@@ -3013,12 +3013,34 @@ and (declaration: (A.mcodekind * bool * A.declaration,B.declaration) matcher) =
 
   | A.MacroDeclInit (stoa,preattrsa,sa,lpa,eas,rpa,attrsa,weqa,inia,enda),
       B.MacroDeclInit ((stob,preattrsb,sb,ebs,attrsb,inib),ii) ->
-      let (iisb, lpb, rpb, weqb, iiendb, iifakestart, iistob) =
-        (match ii with
-        |  iisb::lpb::rpb::weqb::iiendb::iifakestart::iisto ->
-            (iisb,lpb,rpb,weqb,iiendb, iifakestart,iisto)
-        |  _ -> raise (Impossible 28)
-        ) in
+
+      (match ii with
+        iisb::lpb::rpb::weqb::iiendb::[] ->
+
+        storage_optional_allminus allminus
+          None stoa ((stob, false, B.NoAlign), []) >>= (fun (_,stoa) ((stob, _, _), _) ->
+	attribute_list allminus preattrsa preattrsb >>= (fun preattrsa preattrsb ->
+        ident DontKnow sa (sb, iisb) >>= (fun sa (sb, iisb) ->
+        tokenf lpa lpb >>= (fun lpa lpb ->
+        tokenf rpa rpb >>= (fun rpa rpb ->
+        tokenf weqa weqb >>= (fun weqa weqb ->
+        tokenf enda iiendb >>= (fun enda iiendb ->
+        arguments (seqstyle eas) (A.unwrap eas) ebs >>= (fun easunwrap ebs ->
+	attribute_list allminus attrsa attrsb >>= (fun attrsa attrsb ->
+	initialiser inia inib >>= (fun inia inib ->
+        let eas = A.rewrap eas easunwrap in
+
+          return (
+            (mckstart, allminus,
+             (A.MacroDeclInit(stoa,preattrsa,sa,lpa,eas,rpa,attrsa,weqa,inia,enda)) +>
+	     A.rewrap decla),
+            (B.MacroDeclInit ((stob,preattrsb,sb,ebs,attrsb,inib),
+                         [iisb;lpb;rpb;iiendb]))
+          )))))))))))
+
+
+      | iisb::lpb::rpb::weqb::iiendb::iifakestart::iistob ->
+
         storage_optional_allminus allminus
           None stoa ((stob, false, B.NoAlign), iistob) >>= (fun (_,stoa) ((stob, _, _), iistob) ->
 	attribute_list allminus preattrsa preattrsb >>= (fun preattrsa preattrsb ->
@@ -3041,6 +3063,7 @@ and (declaration: (A.mcodekind * bool * A.declaration,B.declaration) matcher) =
                          [iisb;lpb;rpb;iiendb;iifakestart] @ iistob))
           ))))))))))))
 
+      | _ -> raise (Impossible 28))
 
   | A.MacroDeclInit (stoa,preattrs,sa,lpa,eas,rpa,attrs,weqa,inia,enda), _ -> fail
 

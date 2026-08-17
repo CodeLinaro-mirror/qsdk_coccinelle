@@ -2009,6 +2009,9 @@ decl2:
      attributes_opt teq initialize TPtVirg
      { function _ ->
        let (attrs,(sto,stoii)) = fixDeclSpecForMacroDecl $1 in
+       match stoii with
+         [] -> MacroDeclInit((sto, attrs, fst $2, $4, $6, $8), [snd $2;$3;$5;$7;$9])
+       | _ ->
        MacroDeclInit
 	 ((sto, attrs, fst $2, $4, $6, $8),
 	  (snd $2::$3::$5::$7::$9::prefakeInfo 5 stoii::stoii)) }
