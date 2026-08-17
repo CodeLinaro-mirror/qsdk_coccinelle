@@ -2934,30 +2934,48 @@ and (declaration: (A.mcodekind * bool * A.declaration,B.declaration) matcher) =
 
   | A.MacroDecl (stoa,preattrsa,sa,lpa,eas,rpa,attrsa,enda),
 	B.MacroDecl ((stob,preattrsb,sb,ebs,attrsb,true),ii) ->
-      let (iisb, lpb, rpb, iiendb, iifakestart, iistob) =
-        (match ii with
-        | iisb::lpb::rpb::iiendb::iifakestart::iisto ->
-            (iisb,lpb,rpb,iiendb, iifakestart,iisto)
-        | _ -> raise (Impossible 26)
-        ) in
-        storage_optional_allminus allminus
-          None stoa ((stob, false, B.NoAlign), iistob) >>= (fun (_,stoa) ((stob, _, _), iistob) ->
-	attribute_list allminus preattrsa preattrsb >>= (fun preattrsa preattrsb ->
-        X.tokenf_mck mckstart iifakestart >>= (fun mckstart iifakestart ->
-	ident DontKnow sa (sb, iisb) >>= (fun sa (sb, iisb) ->
-	attribute_list allminus attrsa attrsb >>= (fun attrsa attrsb ->
-        tokenf lpa lpb >>= (fun lpa lpb ->
-        tokenf rpa rpb >>= (fun rpa rpb ->
-        tokenf enda iiendb >>= (fun enda iiendb ->
-        arguments (seqstyle eas) (A.unwrap eas) ebs >>= (fun easunwrap ebs ->
-        let eas = A.rewrap eas easunwrap in
 
-          return (
-            (mckstart, allminus,
-            (A.MacroDecl (stoa,preattrsa,sa,lpa,eas,rpa,attrsa,enda)) +> A.rewrap decla),
-            (B.MacroDecl ((stob,preattrsb,sb,ebs,attrsb,true),
-                         [iisb;lpb;rpb;iiendb;iifakestart] @ iistob))
-          ))))))))))
+      (match ii with
+        | iisb::lpb::rpb::iiendb::[] ->
+
+            storage_optional_allminus allminus
+            None stoa ((stob, false, B.NoAlign), []) >>= (fun (_,stoa) ((stob, _, _), _) ->
+	          attribute_list allminus preattrsa preattrsb >>= (fun preattrsa preattrsb ->
+	          ident DontKnow sa (sb, iisb) >>= (fun sa (sb, iisb) ->
+	          attribute_list allminus attrsa attrsb >>= (fun attrsa attrsb ->
+            tokenf lpa lpb >>= (fun lpa lpb ->
+            tokenf rpa rpb >>= (fun rpa rpb ->
+            tokenf enda iiendb >>= (fun enda iiendb ->
+            arguments (seqstyle eas) (A.unwrap eas) ebs >>= (fun easunwrap ebs ->
+            let eas = A.rewrap eas easunwrap in
+              return (
+                (mckstart, allminus,
+                (A.MacroDecl (stoa,preattrsa,sa,lpa,eas,rpa,attrsa,enda)) +> A.rewrap decla),
+                (B.MacroDecl ((stob,preattrsb,sb,ebs,attrsb,true),
+                            [iisb;lpb;rpb;iiendb]))
+              )))))))))
+
+        | iisb::lpb::rpb::iiendb::iifakestart::iistob ->
+
+            storage_optional_allminus allminus
+            None stoa ((stob, false, B.NoAlign), iistob) >>= (fun (_,stoa) ((stob, _, _), iistob) ->
+	          attribute_list allminus preattrsa preattrsb >>= (fun preattrsa preattrsb ->
+            X.tokenf_mck mckstart iifakestart >>= (fun mckstart iifakestart ->
+	          ident DontKnow sa (sb, iisb) >>= (fun sa (sb, iisb) ->
+	          attribute_list allminus attrsa attrsb >>= (fun attrsa attrsb ->
+            tokenf lpa lpb >>= (fun lpa lpb ->
+            tokenf rpa rpb >>= (fun rpa rpb ->
+            tokenf enda iiendb >>= (fun enda iiendb ->
+            arguments (seqstyle eas) (A.unwrap eas) ebs >>= (fun easunwrap ebs ->
+            let eas = A.rewrap eas easunwrap in
+              return (
+                (mckstart, allminus,
+                (A.MacroDecl (stoa,preattrsa,sa,lpa,eas,rpa,attrsa,enda)) +> A.rewrap decla),
+                (B.MacroDecl ((stob,preattrsb,sb,ebs,attrsb,true),
+                            [iisb;lpb;rpb;iiendb;iifakestart] @ iistob))
+              ))))))))))
+
+        | _ -> raise (Impossible 26))
 
   | A.MacroDecl (None,[],sa,lpa,eas,rpa,attrsa,enda),
       B.MacroDecl ((B.NoSto,[],sb,ebs,attrsb,false),ii) ->
@@ -3978,7 +3996,7 @@ and (struct_field: (A.annotated_field, B.field) matcher) =
 		(match ii with
 		| iisb::lpb::rpb::iiendb::iifakestart::iisto ->
 		    (iisb,lpb,rpb,iiendb, iifakestart,iisto)
-		| _ -> raise (Impossible 26)) in
+		| _ -> raise (Impossible 169)) in (* todo dont forget to handle this case, maybe *)
 	      X.tokenf_mck mckstart iifakestart >>= (fun mckstart iifakestart ->
 		ident DontKnow sa (sb, iisb) >>= (fun sa (sb, iisb) ->
 		attribute_list allminus attrsa attrsb >>= (fun attrsa attrsb ->

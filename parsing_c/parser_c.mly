@@ -332,8 +332,8 @@ let (fixOldCDecl: fullType -> fullType) = fun ty ->
 
 (* For fake info added at the end of a conditional or iteration, to have the
 correct position information *)
-let postfakeInfo pii  =
-  let (max,min) =  Lib_parsing_c.max_min_ii_by_pos pii in
+let postfakeInfo pii =
+  let (max,min) = Lib_parsing_c.max_min_ii_by_pos pii in
   let max_pi = Ast_c.get_info (fun x -> x) max in
   let vp = ({str="";charpos=max_pi.Common.charpos;line=max_pi.Common.line;
 	      column=max_pi.Common.column;file=max_pi.Common.file},
@@ -345,9 +345,11 @@ let postfakeInfo pii  =
     danger = ref Ast_c.NoDanger;
   }
 
-let prefakeInfo n pii  =
-  let (max,min) =  Lib_parsing_c.max_min_ii_by_pos pii in
+let prefakeInfo n pii  = 
+
+  let (max,min) = Lib_parsing_c.max_min_ii_by_pos pii in
   let min_pi = Ast_c.get_info (fun x -> x) min in
+
   let vp = ({str="";charpos=min_pi.Common.charpos;line=min_pi.Common.line;
 	      column=min_pi.Common.column;file=min_pi.Common.file},
 	    -1) in
@@ -1995,6 +1997,9 @@ decl2:
    TPtVirg
      { function _ ->
        let (attrs,(sto,stoii)) = fixDeclSpecForMacroDecl $1 in
+       match stoii with
+         [] -> MacroDecl((sto, attrs, fst $2, $4, $6, true), [snd $2;$3;$5;$7])
+       | _ ->
        MacroDecl
 	 ((sto, attrs, fst $2, $4, $6, true),
           (snd $2::$3::$5::$7::prefakeInfo 4 stoii::stoii)) }
