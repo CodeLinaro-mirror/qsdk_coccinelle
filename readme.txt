@@ -29,8 +29,7 @@ You can test coccinelle with:
 
   $ spatch --sp-file demos/simple.cocci demos/simple.c -o /tmp/new_simple.c
 
-If you haven't installed coccinelle, run then ./spatch or ./spatch.opt
-
+If you haven't installed coccinelle, run ./spatch or ./spatch.opt instead
 
 
 If you downloaded the bytecode version of spatch you may first
@@ -42,8 +41,8 @@ the equivalent of 'java', the Java virtual machine, but for OCaml) and then do:
 
 For more information on Coccinelle, type 'make docs' and have a look at the
 files in the docs/ directory. You may need to install the texlive-fonts-extra
-packages from your distribution to compile some of the LaTeX documentation
-files.
+and hevea packages from your distribution to compile some of the LaTeX
+documentation files.
 
  ** Runtime dependencies under Debian/Ubuntu**
 
