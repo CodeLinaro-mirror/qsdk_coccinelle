@@ -157,7 +157,7 @@ let bclabel_pred_maker = function
 
 (* label used to be used here, but it is not used; label is only needed after
 and within dots *)
-let predmaker guard pred label = CTL.Pred pred
+let predmaker guard pred = CTL.Pred pred
 
 let aftpred     = predmaker false (Lib_engine.After,       CTL.Control)
 let retpred     = predmaker false (Lib_engine.Return,      CTL.Control)
@@ -487,26 +487,26 @@ let contains_pos =
   recursor.V.combiner_rule_elem
 
 (* code is not a DisjRuleElem *)
-let make_match label guard code =
+let make_match guard code =
   let v = fresh_var() in
   let matcher = Lib_engine.Match(code) in
   if contains_modif code && not guard
-  then CTL.Exists(true,v,predmaker guard (matcher,CTL.Modif v) label)
+  then CTL.Exists(true,v,predmaker guard (matcher,CTL.Modif v))
   else
     let iso_info = !Flag.track_iso_usage && not (Ast.get_isos code = []) in
     (match (iso_info,!onlyModif,guard,
 	    intersect !used_after (Ast.get_fvs code)) with
       (false,true,_,[]) | (_,_,true,_) ->
-	predmaker guard (matcher,CTL.Control) label
-    | _ -> CTL.Exists(true,v,predmaker guard (matcher,CTL.UnModif v) label))
+	predmaker guard (matcher,CTL.Control)
+    | _ -> CTL.Exists(true,v,predmaker guard (matcher,CTL.UnModif v)))
 
-let make_raw_match label guard code =
+let make_raw_match guard code =
   match intersect !used_after (Ast.get_fvs code) with
-    [] -> predmaker guard (Lib_engine.Match(code),CTL.Control) label
+    [] -> predmaker guard (Lib_engine.Match(code),CTL.Control)
   | _ ->
       let v = fresh_var() in
     CTL.Exists(true,v,predmaker guard (Lib_engine.Match(code),CTL.UnModif v)
-		 label)
+		 )
 
 let rec seq_fvs quantified = function
     [] -> []
@@ -975,11 +975,11 @@ let do_re_matches label guard res quantified minus_quantified =
   let make_guard_match x =
     let stmt_fvs = Ast.get_mfvs x in
     let fvs = get_unquantified minus_quantified stmt_fvs in
-    non_saved_quantify fvs (make_match None true x) in
+    non_saved_quantify fvs (make_match true x) in
   let make_match x =
     let stmt_fvs = Ast.get_fvs x in
     let fvs = get_unquantified quantified stmt_fvs in
-    quantify guard fvs (make_match None guard x) in
+    quantify guard fvs (make_match guard x) in
 (* label used to be used here, but it is not use; label is only needed after
 and within dots
     ctl_and CTL.NONSTRICT (label_pred_maker label) *)
@@ -1000,16 +1000,13 @@ and within dots
    code doesn't contain an Exp or Ty
    this one is for use when it is not practical to push the quantifier inwards
  *)
-let header_match label guard code : ('a, Ast.meta_name, 'b) CTL.generic_ctl =
+let header_match guard code : ('a, Ast.meta_name, 'b) CTL.generic_ctl =
   match Ast.unwrap code with
     Ast.DisjRuleElem(res) ->
-      let make_match = make_match None guard in
+      let make_match = make_match guard in
       let orop = if guard then ctl_or else ctl_seqor in
-(* label used to be used here, but it is not use; label is only needed after
-and within dots
-      ctl_and CTL.NONSTRICT (label_pred_maker label) *)
       (List.fold_left orop CTL.False (List.map make_match res))
-  | _ -> make_match label guard code
+  | _ -> make_match guard code
 
 (* --------------------------------------------------------------------- *)
 (* control structures *)
@@ -1024,7 +1021,7 @@ let end_control_structure fvs header body after_pred
 	(false,make_seq_after2 guard after_pred after)
     | _ ->
 	let match_endif =
-	  let make_match = make_match label guard in
+	  let make_match = make_match guard in
 	  make_meta_rule_elem make_match guard "1" aft Ast.CstrTrue (afvs,afresh,ainh) in
 	(true,
 	 make_seq_after_ex guard after_pred
@@ -1078,11 +1075,11 @@ let ifthen ifheader branch ((afvs,_,_,_) as aft) after
     (* no point to put a label on truepred etc; it is local to this construct
        so it must have the same label *)
     make_seq guard
-      [truepred None; recurse branch NotTop Tail new_quantified new_mquantified
+      [truepred; recurse branch NotTop Tail new_quantified new_mquantified
 	  (Some (lv,used)) llabel slabel guard] in
-  let after_pred = aftpred None in
+  let after_pred = aftpred in
   let or_cases after_branch =
-    Common.Left [true_branch; fallpred None; after_branch] in
+    Common.Left [true_branch; fallpred; after_branch] in
   let (if_header,wrapper) =
     if !used
     then
@@ -1153,17 +1150,17 @@ let ifthenelse ifheader branch1 els branch2 ((afvs,_,_,_) as aft) after
   let used = ref false in
   let true_branch =
     make_seq guard
-      [truepred None; recurse branch1 NotTop Tail new_quantified new_mquantified
+      [truepred; recurse branch1 NotTop Tail new_quantified new_mquantified
 	  (Some (lv,used)) llabel slabel guard] in
   let false_branch =
     make_seq guard
-      [falsepred None;
+      [falsepred;
 	quantify guard
 	  (Common.minus_set (Ast.get_fvs els) new_quantified)
-	  (header_match None guard els);
+	  (header_match guard els);
 	recurse branch2 NotTop Tail new_quantified new_mquantified
 	  (Some (lv,used)) llabel slabel guard] in
-  let after_pred = aftpred None in
+  let after_pred = aftpred in
   let or_cases after_branch =
     Common.Left [true_branch; false_branch; after_branch] in
   let s = guard_to_strict guard in
@@ -1176,8 +1173,8 @@ let ifthenelse ifheader branch1 els branch2 ((afvs,_,_,_) as aft) after
     else (if_header,function x -> x) in
   wrapper
     (end_control_structure bothfvs if_header or_cases after_pred
-      (Some(ctl_and s (ctl_ex (falsepred None)) (ctl_ex after_pred)))
-      (Some(ctl_ex (falsepred None)))
+      (Some(ctl_and s (ctl_ex (falsepred)) (ctl_ex after_pred)))
+      (Some(ctl_ex (falsepred)))
       aft after label guard)
 
 let forwhile inloop header body ((afvs,_,_,_) as aft) after
@@ -1206,9 +1203,9 @@ let forwhile inloop header body ((afvs,_,_,_) as aft) after
 	recurse body NotTop Tail new_quantified new_mquantified
 	    (Some (lv,used)) (Some (lv,used)) None guard in
       if inloop
-      then make_seq guard [inlooppred None; dobody]
+      then make_seq guard [inlooppred; dobody]
       else dobody in
-    let after_pred = (if inloop then loopfallpred else aftpred) None in
+    let after_pred = (if inloop then loopfallpred else aftpred) in
     let or_cases after_branch =
       Common.Left [body; after_branch] in
     let (header,wrapper) =
@@ -1268,13 +1265,13 @@ let dowhile doheader body whiletail after quantified
   let lv = get_label_ctr() in
   let tail_branch =
     ctl_and CTL.NONSTRICT tailer
-      (ctl_and CTL.NONSTRICT (ctl_ex (inlooppred None)) (ctl_ex (fallpred None))) in
+      (ctl_and CTL.NONSTRICT (ctl_ex (inlooppred)) (ctl_ex (fallpred))) in
   let used = ref false in
   let body =
     make_seq guard
       [recurse body NotTop (After (tail_branch)) new_quantified new_mquantified (Some (lv, used))
          (Some (lv, used)) None guard] in
-  let after_branch = aftpred None in
+  let after_branch = aftpred in
   let or_cases after_branch = Common.Left [body; after_branch] in
   let (header, wrapper) =
     if !used
@@ -1310,7 +1307,7 @@ let sequencibility body label_pred process_bef_aft = function
 	     ctl_and CTL.NONSTRICT (ctl_not (ctl_back_ax label_pred)) x))
   | Ast.NotSequencible -> body (function x -> x)
 
-let svar_context_with_add_after stmt s label quantified d ast
+let svar_context_with_add_after stmt s quantified d ast
     seqible after process_bef_aft guard fvinfo =
   let label_var = (*fresh_label_var*) string2var "_lab" in
   let label_pred =
@@ -1318,7 +1315,7 @@ let svar_context_with_add_after stmt s label quantified d ast
   (*let prelabel_pred =
     CTL.Pred (Lib_engine.PrefixLabel(label_var),CTL.Control) in*)
   let matcher d =
-    let make_match = make_match None guard in
+    let make_match = make_match guard in
     make_meta_rule_elem make_match guard "2" d Ast.CstrTrue fvinfo in
   let full_metamatch = matcher d in
   let first_metamatch =
@@ -1351,7 +1348,7 @@ let svar_context_with_add_after stmt s label quantified d ast
     ctl_and CTL.NONSTRICT middle_metamatch prelabel_pred in
 *)
 
-  let to_end = ctl_or (aftpred None) (loopfallpred None) in
+  let to_end = ctl_or (aftpred) (loopfallpred) in
   let left_or = (* the whole statement is one node *)
     make_seq_after guard
       (ctl_and CTL.NONSTRICT (ctl_not (ctl_ex to_end)) full_metamatch) after in
@@ -1380,7 +1377,7 @@ let svar_context_with_add_after stmt s label quantified d ast
   let body f =
     ctl_and CTL.NONSTRICT label_pred
        (f (ctl_and CTL.NONSTRICT
-	    (make_raw_match label false ast) (ctl_or left_or right_or))) in
+	    (make_raw_match false ast) (ctl_or left_or right_or))) in
   let stmt_fvs = Ast.get_fvs stmt in
   let fvs = get_unquantified quantified stmt_fvs in
   quantify guard (label_var::fvs)
@@ -1394,17 +1391,17 @@ let svar_minus_or_no_add_after stmt s label quantified d ast
   let prelabel_pred =
     CTL.Pred (Lib_engine.PrefixLabel(label_var),CTL.Control) in
   let matcher d =
-    let make_match = make_match None guard in
+    let make_match = make_match guard in
     make_meta_rule_elem make_match guard "3" d Ast.CstrTrue fvinfo in
   let ender =
     match (d,after) with
       (Ast.PLUS _, _) -> failwith "asttoctl2: not possible 15"
     | (Ast.CONTEXT(pos,Ast.NOTHING),(Tail|End|VeryEnd)) ->
 	(* just match the root. don't care about label; always ok *)
-	make_raw_match None false ast
+	make_raw_match false ast
     | (Ast.CONTEXT(pos,Ast.BEFORE(_,_)),(Tail|End|VeryEnd)) ->
 	ctl_and CTL.NONSTRICT
-	  (make_raw_match None false ast) (* statement *)
+	  (make_raw_match false ast) (* statement *)
 	  (matcher d)                     (* transformation *)
     | (Ast.CONTEXT(pos,(Ast.NOTHING|Ast.BEFORE(_,_))),
        ((After a | Guard a) as after)) ->
@@ -1413,14 +1410,14 @@ let svar_minus_or_no_add_after stmt s label quantified d ast
 	 (* not really sure what this is doing, esp is_compound... *)
 	let first_metamatch = matcher d in
 	(* try to follow after link *)
-	let to_end = ctl_or (aftpred None) (loopfallpred None) in
+	let to_end = ctl_or (aftpred) (loopfallpred) in
 	let is_compound =
 	  ctl_ex
 	    (make_seq_ex guard
 	       [to_end; make_seq_after guard CTL.True after]) in
 	let not_compound =
 	  make_seq_after guard (ctl_not (ctl_ex to_end)) after in
-	ctl_and CTL.NONSTRICT (make_raw_match label false ast)
+	ctl_and CTL.NONSTRICT (make_raw_match false ast)
 	  (ctl_and CTL.NONSTRICT
 	     first_metamatch (ctl_or is_compound not_compound))
     | (Ast.CONTEXT(pos,(Ast.AFTER _|Ast.BEFOREAFTER _)),_) ->
@@ -1433,10 +1430,10 @@ let svar_minus_or_no_add_after stmt s label quantified d ast
 	  | _ -> (matcher d,
 		  matcher(Ast.MINUS(pos,inst,adj,Ast.NOREPLACEMENT)),
 		  ctl_and CTL.NONSTRICT
-		    (ctl_not (make_raw_match label false ast))
+		    (ctl_not (make_raw_match false ast))
 		    (matcher(Ast.MINUS(pos,inst,adj,Ast.NOREPLACEMENT)))) in
 	(* try to follow after link *)
-	let to_end = ctl_or (aftpred None) (loopfallpred None) in
+	let to_end = ctl_or (aftpred) (loopfallpred) in
 	let is_compound =
 	  ctl_ex
 	    (make_seq_ex guard
@@ -1444,7 +1441,7 @@ let svar_minus_or_no_add_after stmt s label quantified d ast
 	let not_compound =
 	  make_seq_after guard (ctl_not (ctl_ex to_end)) after in
 	ctl_and CTL.NONSTRICT
-	  (ctl_and CTL.NONSTRICT (make_raw_match label false ast)
+	  (ctl_and CTL.NONSTRICT (make_raw_match false ast)
 	     (ctl_and CTL.NONSTRICT
 		first_metamatch (ctl_or is_compound not_compound)))
           (* don't have to put anything before the beginning, so don't have to
@@ -1453,7 +1450,7 @@ let svar_minus_or_no_add_after stmt s label quantified d ast
           what they should because it is in the lhs of the andany. *)
 	  (CTL.HackForStmt(CTL.FORWARD,CTL.NONSTRICT,
 			   ctl_and CTL.NONSTRICT label_pred
-			     (make_raw_match label false ast),
+			     (make_raw_match false ast),
 			   ctl_and CTL.NONSTRICT prelabel_pred rest_metamatch))
   in
   let body f = ctl_and CTL.NONSTRICT label_pred (f ender) in
@@ -1466,13 +1463,13 @@ let svar_minus_or_no_add_after stmt s label quantified d ast
 (* dots and nests *)
 
 let dots_au is_strict toend label s wrapcode n x seq_after y quantifier =
-  let matchgoto = gotopred None in
+  let matchgoto = gotopred in
   let matchbreak =
-    make_match None false
+    make_match false
       (wrapcode
 	 (Ast.Break(Ast.make_mcode "break",Ast.make_mcode ";"))) in
   let matchcontinue =
-     make_match None false
+     make_match false
       (wrapcode
 	 (Ast.Continue(Ast.make_mcode "continue",Ast.make_mcode ";"))) in
   let op = if quantifier = !exists then ctl_au else ctl_anti_au in
@@ -1480,9 +1477,9 @@ let dots_au is_strict toend label s wrapcode n x seq_after y quantifier =
     if quantifier = Exists
     then Common.Left(CTL.False)
     else if toend
-    then Common.Left(CTL.Or(aftpred label,exitpred label))
+    then Common.Left(CTL.Or(aftpred, exitpred))
     else if is_strict
-    then Common.Left(aftpred label)
+    then Common.Left(aftpred)
     else
       Common.Right
 	(function vx -> function v ->
@@ -1506,10 +1503,10 @@ let dots_au is_strict toend label s wrapcode n x seq_after y quantifier =
 		  | _ -> false in
 		is_paren e1 or is_paren e2
 	    | _ -> false in *)
-	  ctl_or (aftpred label)
+	  ctl_or (aftpred)
 	    (quantify false [lv]
 	       (ctl_and CTL.NONSTRICT
-		  (ctl_and CTL.NONSTRICT (esctruepred label) labelpred)
+		  (ctl_and CTL.NONSTRICT (esctruepred) labelpred)
 		  (op CTL.NONSTRICT
 		     (ctl_and CTL.NONSTRICT (ctl_not v)
 			(ctl_and CTL.NONSTRICT vx preflabelpred))
@@ -1517,12 +1514,12 @@ let dots_au is_strict toend label s wrapcode n x seq_after y quantifier =
 			(if !Flag_matcher.only_return_is_error_exit
 			then
 			  (ctl_and CTL.NONSTRICT
-			     (retpred None) (ctl_not seq_after))
+			     (retpred) (ctl_not seq_after))
 			else
 			  (ctl_or
 			     (ctl_and CTL.NONSTRICT
-				(ctl_or (aftpred None)
-				   (ctl_or (retpred None) matchcontinue))
+				(ctl_or (aftpred)
+				   (ctl_or (retpred) matchcontinue))
 				(ctl_not seq_after))
 			     (ctl_and CTL.NONSTRICT
 				(ctl_or matchgoto matchbreak)
@@ -1596,10 +1593,10 @@ let rec dots_and_nests plus nest whencodes bef aft dotcode after label
 	    | Ast.WhenModifier(_) -> (poswhen,negwhen)
 	    | Ast.WhenNotTrue(e) ->
 		(poswhen,
-		  ctl_or (whencond_true e label guard quantified) negwhen)
+		  ctl_or (whencond_true e guard quantified) negwhen)
 	    | Ast.WhenNotFalse(e) ->
 		(poswhen,
-		  ctl_or (whencond_false e label guard quantified) negwhen))
+		  ctl_or (whencond_false e guard quantified) negwhen))
 	(CTL.True,CTL.False(*bef_aft*)) (List.rev whencodes) in
     (*bef_aft modifies arg so that inside of a nest can't cause the next
        to overshoot its boundaries, eg a() <...f()...> b() where f is
@@ -1610,7 +1607,7 @@ let rec dots_and_nests plus nest whencodes bef aft dotcode after label
 (*    if !exists
       then*)
         (* add in After, because it's not part of the program *)
-	ctl_or (aftpred label) negwhen
+	ctl_or (aftpred) negwhen
       (*else negwhen*) in
     ctl_and_ns poswhen (ctl_not negwhen) in
   (* process dot code, if any *)
@@ -1660,8 +1657,8 @@ let rec dots_and_nests plus nest whencodes bef aft dotcode after label
 	assert (label = None);
 	ctl_and CTL.NONSTRICT (ctl_uncheck f) labelled
     | VeryEnd ->
-	let exit = endpred label in
-	let errorexit = exitpred label in
+	let exit = endpred in
+	let errorexit = exitpred in
 	ctl_or exit errorexit
     (* not at all sure what the next two mean... *)
     | End -> CTL.True
@@ -1669,8 +1666,8 @@ let rec dots_and_nests plus nest whencodes bef aft dotcode after label
 	(match label with
 	  Some (lv,used) -> used := true;
 	    ctl_or (CTL.Pred(Lib_engine.Label lv,CTL.Control))
-	      (ctl_back_ex (ctl_or (retpred label) (gotopred label)))
-	| None -> endpred label)
+	      (ctl_back_ex (ctl_or (retpred) (gotopred)))
+	| None -> endpred)
 	  (* was the following, but not clear why sgrep should allow
 	     incomplete patterns
 	let exit = endpred label in
@@ -1680,7 +1677,7 @@ let rec dots_and_nests plus nest whencodes bef aft dotcode after label
 	else exit (* end at the real end of the function *) *) in
   let exists_without_after =
     if quantifier = Exists
-    then (ctl_not (aftpred None))
+    then (ctl_not (aftpred))
     else CTL.True in
   plus_modifier
     (dots_au is_strict ((after = Tail) || (after = VeryEnd))
@@ -1697,11 +1694,11 @@ and get_whencond_exps e =
       List.fold_left Common.union_set [] (List.map get_whencond_exps res)
   | _ -> failwith "asttoctl2: not possible 17"
 
-and make_whencond_headers e e1 label guard quantified =
+and make_whencond_headers e e1 guard quantified =
   let fvs = Ast.get_fvs e in
   let header_pred fvs h =
     quantify guard (get_unquantified quantified fvs)
-      (make_match label guard h) in
+      (make_match guard h) in
   let if_header e1 =
     header_pred fvs
       (Ast.rewrap e
@@ -1758,26 +1755,26 @@ and make_whencond_headers e e1 label guard quantified =
     List.fold_left ctl_or CTL.False (List.map for_header e1) in
   (if_headers, while_exp_headers, while_decl_headers, for_headers)
 
-and whencond_true e label guard quantified =
+and whencond_true e guard quantified =
   let e1 = get_whencond_exps e in
   let (if_headers, while_exp_headers, while_decl_headers, for_headers) =
-    make_whencond_headers e e1 label guard quantified in
+    make_whencond_headers e e1 guard quantified in
   ctl_or
-    (ctl_and CTL.NONSTRICT (truepred label) (ctl_back_ex if_headers))
-    (ctl_and CTL.NONSTRICT (inlooppred label)
+    (ctl_and CTL.NONSTRICT (truepred) (ctl_back_ex if_headers))
+    (ctl_and CTL.NONSTRICT (inlooppred)
        (ctl_back_ex
 	  (ctl_or while_exp_headers (ctl_or while_decl_headers for_headers))))
 
-and whencond_false e label guard quantified =
+and whencond_false e guard quantified =
   let e1 = get_whencond_exps e in
   let (if_headers, while_exp_headers, while_decl_headers, for_headers) =
-    make_whencond_headers e e1 label guard quantified in
+    make_whencond_headers e e1 guard quantified in
   (* if with else *)
-  ctl_or (ctl_and CTL.NONSTRICT (falsepred label) (ctl_back_ex if_headers))
+  ctl_or (ctl_and CTL.NONSTRICT (falsepred) (ctl_back_ex if_headers))
     (* if without else *)
-    (ctl_or (ctl_and CTL.NONSTRICT (fallpred label) (ctl_back_ex if_headers))
+    (ctl_or (ctl_and CTL.NONSTRICT (fallpred) (ctl_back_ex if_headers))
        (* failure of loop test *)
-       (ctl_and CTL.NONSTRICT (loopfallpred label)
+       (ctl_and CTL.NONSTRICT (loopfallpred)
 	  (ctl_or (ctl_back_ex while_exp_headers)
 	     (ctl_or (ctl_back_ex while_decl_headers)
 		(ctl_back_ex for_headers)))))
@@ -1861,7 +1858,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
   let make_seq   = make_seq guard in
   let make_seq_after = make_seq_after guard in
   let real_make_match = make_match in
-  let make_match = header_match label guard in
+  let make_match = header_match guard in
 
   let dots_done = ref false in (* hack for dots cases we can easily handle *)
 
@@ -1878,7 +1875,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 		     keep,seqible,_)
       | Ast.MetaStmt((s,_,(Ast.CONTEXT(_,Ast.AFTER(_,_)) as d),_),cstr,
 		     keep,seqible,_) ->
-	  svar_context_with_add_after stmt s label quantified d ast seqible
+	  svar_context_with_add_after stmt s quantified d ast seqible
 	    after
 	    (process_bef_aft pos quantified minus_quantified
 	       label llabel slabel true)
@@ -1958,7 +1955,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 		make_match(Ast.rewrap ast (Ast.ReturnExpr(ret,edots,semi))) in
 	      (match new_mc with
 		Some new_mc ->
-		  let exit = endpred None in
+		  let exit = endpred in
 		  let mod_rbrace =
 		    Ast.rewrap ast (Ast.SeqEnd (("}",info,new_mc,pos@spos))) in
 		  let stripped_rbrace =
@@ -2035,7 +2032,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	(* label is not needed; paren_pred is enough *)
 	quantify guard rbfvs
 	  (ctl_au (make_match empty_rbrace)
-	     (ctl_and (real_make_match None guard rbrace) paren_pred)) in
+	     (ctl_and (real_make_match guard rbrace) paren_pred)) in
       let new_quantified2 =
 	Common.union_set b1fvs (Common.union_set b2fvs quantified) in
       let new_mquantified2 =
@@ -2047,7 +2044,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	     (make_seq
 		[start_brace;
 		  (ctl_or
-		     (if !exists = Exists then CTL.False else (aftpred label))
+		     (if !exists = Exists then CTL.False else (aftpred))
 		     (quantify guard b2fvs
 			(statement_list body NotTop
 			   (After (make_seq_after end_brace after))
@@ -2085,7 +2082,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	quantify true [pv;lv]
 	  (quantify guard b1fvs
 	     (make_seq_ex guard
-		[start_brace;aftpred label;
+		[start_brace;aftpred;
 		  make_seq_after end_brace after]))
       else if ends_in_return body
       then
@@ -2102,7 +2099,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	let pattern2 =
 	  let body = preprocess_dots body in (* redo, to drop braces *)
 	  make_seq
-	    [gotopred label;
+	    [gotopred;
 	      ctl_au
 		(make_match empty_rbrace)
 		(ctl_ax (* skip the destination label *)
@@ -2136,9 +2133,9 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
                               (CTL.FORWARD,CTL.STRICT,
                                CTL.Pred
 				 (Lib_engine.PrefixLabel(lv),CTL.Control),
-                               ctl_or (aftpred None) (* jll new! *)
+                               ctl_or (aftpred) (* jll new! *)
 				 (ctl_and(*brace must be after goto*)
-                                    (gotopred (Some (lv,ref true)))
+                                    (gotopred)
                                   (* want AF even for sgrep *)
                                     (CTL.AF
 				       (CTL.FORWARD,CTL.STRICT,end_brace)))))
@@ -2150,11 +2147,11 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 		    [ctl_and start_brace
 		      (* check that we always escape with a goto *)
 		      (* must use EX because we want to follow control edges *)
-			(ctl_and (ctl_ex (gotoaftpred None))
+			(ctl_and (ctl_ex (gotoaftpred))
 			   (ctl_not
 			      (ctl_ex
-				 (ctl_and (aftpred None)
-				    (ctl_not (gotoaftpred None))))));
+				 (ctl_and (aftpred)
+				    (ctl_not (gotoaftpred))))));
 		      real_code])) in
 	ctl_or pattern_as_given (ctl_or pattern2 pattern3)
       else pattern_as_given
@@ -2376,7 +2373,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 		  match seq_fvs new2_quantified [Ast.get_fvs header] with
 		    [(e1fvs,_)] -> e1fvs
 		  | _ -> failwith "asttoctl2: not possible 24" in
-		quantify guard e1fvs (real_make_match label true header)
+		quantify guard e1fvs (real_make_match true header)
 	    | Ast.OptCase(case_line) -> failwith "not supported")
 	  cases in
       let lv = get_label_ctr() in
@@ -2433,8 +2430,8 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	      |	_ -> false)
 	    cases
 	then function x -> x
-	else function x -> ctl_or (fallpred label) x in
-      let after_pred = aftpred label in
+	else function x -> ctl_or (fallpred) x in
+      let after_pred = aftpred in
       let body after_branch =
 	Common.Right
 	  (ctl_or
@@ -2612,7 +2609,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 				 let leftarg =
 				   if quantifier = Exists
 				   then
-				     ctl_and (ctl_not (aftpred None)) leftarg
+				     ctl_and (ctl_not (aftpred)) leftarg
 				   else leftarg in
 				 op leftarg
 				   (ctl_and
@@ -2670,7 +2667,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	      quantify guard aafvs (* vars needed only for ender *)
 		(make_meta_rule_elem make_match guard "7" aft Ast.CstrExit (afvs,afresh,ainh)) in
 	    CTL.AndAny(CTL.FORWARD,CTL.NONSTRICT,function_header,
-		       ctl_or (ctl_not (preendpred label)) match_ender) in
+		       ctl_or (ctl_not (preendpred)) match_ender) in
       quantify guard ahfvs
 	(quantify guard b1fvs
 	   (make_seq [function_header; quantify guard b2fvs body_code]))
@@ -2715,11 +2712,11 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
       let body_code =
 	match body with
 	  Ast.DefineStms body ->
-	    statement_list body NotTop (After(endpred None))
+	    statement_list body NotTop (After(endpred))
 	      (Common.union_set bfvs quantified)
 	      (Common.union_set mbfvs minus_quantified)
 	      None llabel slabel true guard pos
-	| Ast.DefineAttr attr -> make_seq_after (make_match attr) (After(endpred None)) in
+	| Ast.DefineAttr attr -> make_seq_after (make_match attr) (After(endpred)) in
       quantify guard bfvs (make_seq [define_header; body_code])
   | Ast.AsStmt(stmt,asstmt) ->
       ctl_and
@@ -2749,8 +2746,8 @@ and do_between_dots stmt term after quantified minus_quantified
 	let case2 = ctl_and CTL.NONSTRICT (ctl_not (CTL.Ref v)) term in
 	CTL.Let
 	  (v,ctl_or
-	     (ctl_back_ex (ctl_or (truepred label) (inlooppred label)))
-	     (ctl_back_ex (ctl_back_ex (falsepred label))),
+	     (ctl_back_ex (ctl_or (truepred) (inlooppred)))
+	     (ctl_back_ex (ctl_back_ex (falsepred))),
 	   ctl_or case1 case2)
     | Ast.NoDots -> term
 
@@ -2762,7 +2759,7 @@ and process_bef_aft pos quantified minus_quantified label llabel slabel guard =
       let paren_pred = CTL.Pred (Lib_engine.Paren n,CTL.Control) in
       let s = guard_to_strict guard in
       quantify true (get_unquantified quantified [n])
-	(ctl_and s (make_raw_match None guard re) paren_pred)
+	(ctl_and s (make_raw_match guard re) paren_pred)
   | Ast.Other s ->
       statement pos s NotTop Tail quantified minus_quantified
 	label llabel slabel guard
@@ -2809,17 +2806,17 @@ and protect_top_level stmt_dots formula =
     | _ -> None in
   if starts_with_dots
   then (* EX because there is a loop on enter/top *)
-    ctl_and CTL.NONSTRICT (toppred None) (ctl_ex formula)
+    ctl_and CTL.NONSTRICT (toppred) (ctl_ex formula)
   else
     match starts_with_non_context_brace with
       None -> formula
     | Some false ->
 	ctl_and CTL.NONSTRICT
-	  (ctl_not(CTL.EX(CTL.BACKWARD,funpred None)))
+	  (ctl_not(CTL.EX(CTL.BACKWARD,funpred)))
 	  formula
     | Some true ->
 	ctl_and CTL.NONSTRICT
-	  (ctl_not(CTL.EX(CTL.BACKWARD,unsbrpred None)))
+	  (ctl_not(CTL.EX(CTL.BACKWARD,unsbrpred)))
 	  formula
 
 (* Look for a rule that has a statement and a ..., which should not
