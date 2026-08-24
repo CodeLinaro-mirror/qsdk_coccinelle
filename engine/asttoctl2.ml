@@ -971,7 +971,7 @@ let exptymatch l make_match make_guard_match =
 (* code might be a DisjRuleElem, in which case we break it apart
    code might contain an Exp or Ty
    this one pushes the quantifier inwards *)
-let do_re_matches label guard res quantified minus_quantified =
+let do_re_matches guard res quantified minus_quantified =
   let make_guard_match x =
     let stmt_fvs = Ast.get_mfvs x in
     let fvs = get_unquantified minus_quantified stmt_fvs in
@@ -1012,7 +1012,7 @@ let header_match guard code : ('a, Ast.meta_name, 'b) CTL.generic_ctl =
 (* control structures *)
 
 let end_control_structure fvs header body after_pred
-    after_checks no_after_checks (afvs,afresh,ainh,aft) after label guard =
+    after_checks no_after_checks (afvs,afresh,ainh,aft) after guard =
   (* aft indicates what is added after the whole if, which has to be added
      to the endif node *)
   let (aft_needed,after_branch) =
@@ -1045,7 +1045,7 @@ let end_control_structure fvs header body after_pred
 	      ctl_ax_absolute s body)))
 
 let ifthen ifheader branch ((afvs,_,_,_) as aft) after
-    quantified minus_quantified label llabel slabel recurse make_match guard =
+    quantified minus_quantified llabel slabel recurse make_match guard =
 (* "if (test) thn" becomes:
     if(test) & AX((TrueBranch & AX thn) v FallThrough v After)
 
@@ -1089,10 +1089,10 @@ let ifthen ifheader branch ((afvs,_,_,_) as aft) after
     else (if_header,function x -> x) in
   wrapper
     (end_control_structure bfvs if_header or_cases after_pred
-	(Some(ctl_ex after_pred)) None aft after label guard)
+	(Some(ctl_ex after_pred)) None aft after guard)
 
 let ifthenelse ifheader branch1 els branch2 ((afvs,_,_,_) as aft) after
-    quantified minus_quantified label llabel slabel recurse make_match guard =
+    quantified minus_quantified llabel slabel recurse make_match guard =
 (*  "if (test) thn else els" becomes:
     if(test) & AX((TrueBranch & AX thn) v
                   (FalseBranch & AX (else & AX els)) v After)
@@ -1175,10 +1175,10 @@ let ifthenelse ifheader branch1 els branch2 ((afvs,_,_,_) as aft) after
     (end_control_structure bothfvs if_header or_cases after_pred
       (Some(ctl_and s (ctl_ex (falsepred)) (ctl_ex after_pred)))
       (Some(ctl_ex (falsepred)))
-      aft after label guard)
+      aft after guard)
 
 let forwhile inloop header body ((afvs,_,_,_) as aft) after
-    quantified minus_quantified label recurse make_match guard =
+    quantified minus_quantified recurse make_match guard =
   let process _ =
     (* the translation in this case is similar to that of an if with no else *)
     (* free variables *)
@@ -1217,7 +1217,7 @@ let forwhile inloop header body ((afvs,_,_,_) as aft) after
       else (header,function x -> x) in
     wrapper
       (end_control_structure bfvs header or_cases after_pred
-	 (Some(ctl_ex after_pred)) None aft after label guard) in
+	 (Some(ctl_ex after_pred)) None aft after guard) in
   match (Ast.unwrap body,aft) with
     (Ast.Atomic(re),(_,_,_,Ast.CONTEXT(_,Ast.NOTHING))) ->
       let pos_unitary pos =
@@ -1240,7 +1240,7 @@ let forwhile inloop header body ((afvs,_,_,_) as aft) after
   | _ -> process()
 
 let dowhile doheader body whiletail after quantified
-      minus_quantified label recurse make_match guard =
+      minus_quantified recurse make_match guard =
   let (dofvs,bfvs,whilefvs) =
     match
       seq_fvs quantified
@@ -1280,7 +1280,7 @@ let dowhile doheader body whiletail after quantified
       (ctl_and CTL.NONSTRICT header label_pred, (function body -> quantify true [lv] body))
     else (header, function x -> x) in
   wrapper (end_control_structure bfvs header or_cases after_branch
-             (Some(ctl_ex after_branch)) None aft after label guard)
+             (Some(ctl_ex after_branch)) None aft after guard)
 
 (* --------------------------------------------------------------------- *)
 (* statement metavariables *)
@@ -1383,7 +1383,7 @@ let svar_context_with_add_after stmt s quantified d ast
   quantify guard (label_var::fvs)
     (sequencibility body label_pred process_bef_aft seqible)
 
-let svar_minus_or_no_add_after stmt s label quantified d ast
+let svar_minus_or_no_add_after stmt s quantified d ast
     seqible after process_bef_aft guard fvinfo =
   let label_var = (*fresh_label_var*) string2var "_lab" in
   let label_pred =
@@ -1883,7 +1883,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	    (Ast.get_fvs stmt, Ast.get_fresh stmt, Ast.get_inherited stmt)
 
       |	Ast.MetaStmt((s,_,d,_),cstr,keep,seqible,_) ->
-	  svar_minus_or_no_add_after stmt s label quantified d ast seqible
+	  svar_minus_or_no_add_after stmt s quantified d ast seqible
 	    after
 	    (process_bef_aft pos quantified minus_quantified
 	       label llabel slabel true)
@@ -1894,7 +1894,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	  let term ast =
 	    match Ast.unwrap ast with
 	      Ast.DisjRuleElem(res) ->
-		do_re_matches label guard res quantified minus_quantified
+		do_re_matches guard res quantified minus_quantified
 	    | Ast.Exp(_) | Ast.Ty(_) | Ast.TopId(_) ->
 		let stmt_fvs = Ast.get_fvs stmt in
 		let fvs = get_unquantified quantified stmt_fvs in
@@ -2157,25 +2157,25 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
       else pattern_as_given
   | Ast.IfThen(ifheader,branch,aft) ->
       ifthen ifheader branch aft after quantified minus_quantified
-	  label llabel slabel (statement pos) make_match guard
+	  llabel slabel (statement pos) make_match guard
 
   | Ast.IfThenElse(ifheader,branch1,els,branch2,aft) ->
       ifthenelse ifheader branch1 els branch2 aft after quantified
-	  minus_quantified label llabel slabel (statement pos) make_match guard
+	  minus_quantified llabel slabel (statement pos) make_match guard
 
   | Ast.While(header,body,aft) | Ast.For(header,body,aft)
   | Ast.Iterator(header,body,aft) ->
       forwhile true header body aft after quantified minus_quantified
-	label (statement pos) make_match guard
+	(statement pos) make_match guard
 
   | Ast.ScopedGuard(header,body,aft) ->
       forwhile false header body aft after quantified minus_quantified
-	label (statement pos) make_match guard
+	(statement pos) make_match guard
 
   | Ast.Do(doheader,body,whiletail) ->
       dots_done := true;
       dowhile doheader body whiletail after quantified minus_quantified
-         label (statement pos) make_match guard
+         (statement pos) make_match guard
 
   | Ast.Disj(stmt_dots_list) -> (* list shouldn't be empty *)
       (*ctl_and        seems pointless, disjuncts see label too
@@ -2459,7 +2459,7 @@ and statement (pos : Ast.meta_name list) stmt top after quantified minus_quantif
 	else (switch_header,function x -> x) in
       wrapper
 	(end_control_structure b1fvs switch_header body
-	   after_pred (Some(ctl_ex after_pred)) None aft after label guard)
+	   after_pred (Some(ctl_ex after_pred)) None aft after guard)
   | Ast.FunDecl(header,lbrace,body,rbrace,(afvs,afresh,ainh,aft)) ->
       (* what to do with afvs??? *)
       let (aafvs,ahfvs,hfvs,b1fvs,lbfvs,b2fvs,b3fvs,rbfvs) =
