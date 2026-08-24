@@ -157,24 +157,24 @@ let bclabel_pred_maker = function
 
 (* label used to be used here, but it is not used; label is only needed after
 and within dots *)
-let predmaker guard pred = CTL.Pred pred
+let predmaker pred = CTL.Pred pred
 
-let aftpred     = predmaker false (Lib_engine.After,       CTL.Control)
-let retpred     = predmaker false (Lib_engine.Return,      CTL.Control)
-let funpred     = predmaker false (Lib_engine.FunHeader,   CTL.Control)
-let unsbrpred   = predmaker false (Lib_engine.UnsafeBrace, CTL.Control)
-let toppred     = predmaker false (Lib_engine.Top,         CTL.Control)
-let exitpred    = predmaker false (Lib_engine.ErrorExit,   CTL.Control)
-let endpred     = predmaker false (Lib_engine.PreExit,     CTL.Control)
-let preendpred  = predmaker false (Lib_engine.PreExit,     CTL.Control)
-let gotopred    = predmaker false (Lib_engine.Goto,        CTL.Control)
-let inlooppred  = predmaker false (Lib_engine.InLoop,      CTL.Control)
-let truepred    = predmaker false (Lib_engine.TrueBranch,  CTL.Control)
-let esctruepred = predmaker false (Lib_engine.EscTrueBranch,  CTL.Control)
-let falsepred   = predmaker false (Lib_engine.FalseBranch, CTL.Control)
-let fallpred    = predmaker false (Lib_engine.FallThrough, CTL.Control)
-let loopfallpred = predmaker false (Lib_engine.LoopFallThrough, CTL.Control)
-let gotoaftpred = predmaker false (Lib_engine.GotoAfter,   CTL.Control)
+let aftpred     = predmaker (Lib_engine.After,       CTL.Control)
+let retpred     = predmaker (Lib_engine.Return,      CTL.Control)
+let funpred     = predmaker (Lib_engine.FunHeader,   CTL.Control)
+let unsbrpred   = predmaker (Lib_engine.UnsafeBrace, CTL.Control)
+let toppred     = predmaker (Lib_engine.Top,         CTL.Control)
+let exitpred    = predmaker (Lib_engine.ErrorExit,   CTL.Control)
+let endpred     = predmaker (Lib_engine.PreExit,     CTL.Control)
+let preendpred  = predmaker (Lib_engine.PreExit,     CTL.Control)
+let gotopred    = predmaker (Lib_engine.Goto,        CTL.Control)
+let inlooppred  = predmaker (Lib_engine.InLoop,      CTL.Control)
+let truepred    = predmaker (Lib_engine.TrueBranch,  CTL.Control)
+let esctruepred = predmaker (Lib_engine.EscTrueBranch,  CTL.Control)
+let falsepred   = predmaker (Lib_engine.FalseBranch, CTL.Control)
+let fallpred    = predmaker (Lib_engine.FallThrough, CTL.Control)
+let loopfallpred = predmaker (Lib_engine.LoopFallThrough, CTL.Control)
+let gotoaftpred = predmaker (Lib_engine.GotoAfter,   CTL.Control)
 
 (*let aftret label_var =
   ctl_or (aftpred label_var)
@@ -491,21 +491,21 @@ let make_match guard code =
   let v = fresh_var() in
   let matcher = Lib_engine.Match(code) in
   if contains_modif code && not guard
-  then CTL.Exists(true,v,predmaker guard (matcher,CTL.Modif v))
+  then CTL.Exists(true,v,predmaker (matcher,CTL.Modif v))
   else
     let iso_info = !Flag.track_iso_usage && not (Ast.get_isos code = []) in
     (match (iso_info,!onlyModif,guard,
 	    intersect !used_after (Ast.get_fvs code)) with
       (false,true,_,[]) | (_,_,true,_) ->
-	predmaker guard (matcher,CTL.Control)
-    | _ -> CTL.Exists(true,v,predmaker guard (matcher,CTL.UnModif v)))
+	predmaker (matcher,CTL.Control)
+    | _ -> CTL.Exists(true,v,predmaker (matcher,CTL.UnModif v)))
 
 let make_raw_match guard code =
   match intersect !used_after (Ast.get_fvs code) with
-    [] -> predmaker guard (Lib_engine.Match(code),CTL.Control)
+    [] -> predmaker (Lib_engine.Match(code),CTL.Control)
   | _ ->
       let v = fresh_var() in
-    CTL.Exists(true,v,predmaker guard (Lib_engine.Match(code),CTL.UnModif v)
+    CTL.Exists(true,v,predmaker (Lib_engine.Match(code),CTL.UnModif v)
 		 )
 
 let rec seq_fvs quantified = function
